@@ -1,5 +1,6 @@
+# Author Callum MacKinnon test
+
 import numpy as np
-# test again agian
 from termcolor import colored
 
 global Testing
