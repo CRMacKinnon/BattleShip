@@ -1,4 +1,5 @@
 # Author Callum MacKinnon
+import random
 
 import numpy as np
 from termcolor import colored
@@ -9,36 +10,39 @@ global Testing
 class ConsoleOutput:
     @staticmethod
     def output_error(error):
-        error_diction = {
-            0: '-- Invalid Position: Chose a valid input -- ',
-            1: '-- Ship Overlapping: Chose a valid placement --',
-            2: '-- Invalid Input: 0 <= Input <= 99 --',
-            3: '-- Invalid Input: Heading not in N, E, S, W --',
-            4: '-- Invalid Position: Ship is hanging off the north side of the board --',
-            5: '-- Invalid Position: Ship is hanging off the south side of the board --',
-            6: '-- Invalid Position: Ship is hanging off the east side of the board --',
-            7: '-- Invalid Position: Ship is hanging off the west side of the board --'
-            }
+        error_diction = {0: '-- Invalid Position: Chose a valid input -- ',
+                         1: '-- Ship Overlapping: Chose a valid placement --',
+                         2: '-- Invalid Input: 0 <= Input <= 99 --',
+                         3: '-- Invalid Input: Heading not in N, E, S, W --',
+                         4: '-- Invalid Position: Ship is hanging off the north side of the board --',
+                         5: '-- Invalid Position: Ship is hanging off the south side of the board --',
+                         6: '-- Invalid Position: Ship is hanging off the east side of the board --',
+                         7: '-- Invalid Position: Ship is hanging off the west side of the board --',
+                         8: '-- Invalid Hit: Position has already been hit --',
+                         9: '-- Invalid Hit: Position not in grid --', }
         return print(colored(error_diction[error], 'red'))
 
     @staticmethod
-    def output_message(id_take):
-        error_diction = {
-            0: '-- Enter number of square to start and then North(N), South(S), East (E) or West('
-               'W) from starting position -- Example: 44 then N'
-            }
+    def output_message(id_take, arg = ''):
+        error_diction = {0: '-- Enter number of square to start and then North(N), South(S), East (E) or West('
+                            'W) from starting position -- Example: 44 then N', 1: f'-- HIT at {arg}! --',
+                         2: f'-- MISS at {arg}! --',
+
+                         }
         return print(colored(error_diction[id_take], 'green'))
 
 
 class GameInfo(object):
+
     def __init__(self, name):
         """ Adds all information to the player object. Name grid and all ships"""
         self.name = name
+        self.HP = 17
+        self.guesses = []
         # The players gird
-        self.grid = np.array([[j + str(i) for i in list(range(10))] for j in list('ABCDEFGHIJ')])
+        self.hit_grid = np.array([[j + str(i) for i in list(range(10))] for j in list('ABCDEFGHIJ')])
 
-        self.display_grid = np.array([[j + str(i) for i in list(range(10))] for j in
-                                      list('ABCDEFGHIJ')])
+        self.ship_grid = np.array([[j + str(i) for i in list(range(10))] for j in list('ABCDEFGHIJ')])
 
         # All possible ships to be stored in the player object: passing name, shorthand and length
         self.carrier = ShipInfo('Carrier', 'Ca', 5, 'green')
@@ -47,24 +51,22 @@ class GameInfo(object):
         self.submarine = ShipInfo('Submarine', 'Sb', 3, 'magenta')
         self.destroyer = ShipInfo('Destroyer', 'Dy', 2, 'cyan')
 
-        fleet = [self.carrier, self.battleship, self.cruiser, self.submarine, self.destroyer]
+        self.fleet = [self.carrier, self.battleship, self.cruiser, self.submarine, self.destroyer]
 
         if Testing:
-            PreAllocate(fleet, self.display_grid, self.name)
+            PreAllocate(self.fleet, self.ship_grid, self.name)
         else:
             # Place the ships now they are object inside the player
-            PlaceFleet(fleet, self.display_grid)
+            PlaceFleet(self.fleet, self.ship_grid)
 
-        self.hit_pos = {ship.shorthand: ship.position for ship in fleet}
-
-        GameInfo.show_grid(self.display_grid,self.grid)
+        self.hit_pos = {ship: ship.position for ship in self.fleet}
 
     @staticmethod
     def show_grid(grid_ships, grid_hit):
         filler = np.array([['  ' for i in range(1)] for j in range(10)])
-        filler2 =  np.array([['#' for i in range(1)] for j in range(10)])
+        filler2 = np.array([['#' for i in range(1)] for j in range(10)])
 
-        new = np.hstack((grid_ships, filler,filler2,filler,grid_hit))
+        new = np.hstack((grid_ships, filler, filler2, filler, grid_hit))
 
         col_len = {i: max(map(len, inner)) for i, inner in enumerate(zip(*new))}
 
@@ -73,13 +75,12 @@ class GameInfo(object):
         for inner in new:
             # print(len(inner))
             for col, word in enumerate(inner):
-                if word in ['Ca','Cr','Bt','Sb','Dy']:
-                    word = colored(word,'magenta')
-                else:word = colored(word,'cyan')
+                if word in ['Ca', 'Cr', 'Bt', 'Sb', 'Dy']:
+                    word = colored(word, 'magenta')
+                else:
+                    word = colored(word, 'cyan')
 
-
-
-                print(f"{colored(word,'cyan'):{col_len[col]}}", end = " | ")
+                print(f"{colored(word, 'cyan'):{col_len[col]}}", end = " | ")
             print()
 
 
@@ -89,26 +90,18 @@ class PreAllocate(object):
     def __init__(self, fleet, grid, name):
         self.live_grid = grid
         if name == 'BOT':
-            fleet[0].position, fleet[0].initialise, fleet[0].heading = [
-                ['G5', 'F5', 'E5', 'D5', 'C5'], 'G5', 'N']
+            fleet[0].position, fleet[0].initialise, fleet[0].heading = [['G5', 'F5', 'E5', 'D5', 'C5'], 'G5', 'N']
 
-            fleet[1].position, fleet[1].initialise, fleet[1].heading = [['E4', 'E3', 'E2', 'E1'],
-                                                                        'E4', 'W']
-            fleet[2].position, fleet[2].initialise, fleet[2].heading = [['H8', 'G8', 'F8'], 'H8',
-                                                                        'N']
-            fleet[3].position, fleet[3].initialise, fleet[3].heading = [['I1', 'H1', 'G1'], 'I1',
-                                                                        'N']
+            fleet[1].position, fleet[1].initialise, fleet[1].heading = [['E4', 'E3', 'E2', 'E1'], 'E4', 'W']
+            fleet[2].position, fleet[2].initialise, fleet[2].heading = [['H8', 'G8', 'F8'], 'H8', 'N']
+            fleet[3].position, fleet[3].initialise, fleet[3].heading = [['I1', 'H1', 'G1'], 'I1', 'N']
             fleet[4].position, fleet[4].initialise, fleet[4].heading = [['J4', 'J5'], 'J4', 'E']
         else:
-            fleet[0].position, fleet[0].initialise, fleet[0].heading = [
-                ['A0', 'A1', 'A2', 'A3', 'A4'], 'A0', 'E']
+            fleet[0].position, fleet[0].initialise, fleet[0].heading = [['A0', 'A1', 'A2', 'A3', 'A4'], 'A0', 'E']
 
-            fleet[1].position, fleet[1].initialise, fleet[1].heading = [['E4', 'F4', 'G4', 'H4'],
-                                                                        'E4', 'S']
-            fleet[2].position, fleet[2].initialise, fleet[2].heading = [['F6', 'G6', 'H6'], 'F6',
-                                                                        'S']
-            fleet[3].position, fleet[3].initialise, fleet[3].heading = [['I3', 'I4', 'I5'], 'I3',
-                                                                        'E']
+            fleet[1].position, fleet[1].initialise, fleet[1].heading = [['E4', 'F4', 'G4', 'H4'], 'E4', 'S']
+            fleet[2].position, fleet[2].initialise, fleet[2].heading = [['F6', 'G6', 'H6'], 'F6', 'S']
+            fleet[3].position, fleet[3].initialise, fleet[3].heading = [['I3', 'I4', 'I5'], 'I3', 'E']
             fleet[4].position, fleet[4].initialise, fleet[4].heading = [['I8', 'I7'], 'I8', 'W']
         for ship in fleet:
             for idx, location in enumerate(ship.position):
@@ -138,10 +131,7 @@ class PlaceFleet(object):
 
                     # Take the ship position and heading and determine the array location
                     # Also check to see if the location is valid
-                    ship.position = self.determine_coord(ship.initialise,
-                                                         ship.heading,
-                                                         ship.length,
-                                                         grid_taken)
+                    ship.position = self.determine_coord(ship.initialise, ship.heading, ship.length, grid_taken)
 
             for spot in ship.position:
                 grid_taken.append(spot)
@@ -150,7 +140,7 @@ class PlaceFleet(object):
                 i = np.where(self.live_grid == location)
                 self.live_grid[i[0][0]][i[1][0]] = ship.shorthand
 
-            self.show_grid(self.live_grid)
+            # self.show_grid(self.live_grid)
 
     @staticmethod
     def input_valid(start, heading, grid):
@@ -210,8 +200,7 @@ class PlaceFleet(object):
 
         else:  # else if NW
             for location in coordinates:
-                if location not in np.array([[j + str(i) for i in list(range(10))] for j in
-                                             list('ABCDEFGHIJ')]):
+                if location not in np.array([[j + str(i) for i in list(range(10))] for j in list('ABCDEFGHIJ')]):
                     ConsoleOutput.output_error(0)
                     return False
             else:
@@ -236,15 +225,13 @@ class PlaceFleet(object):
         # print using the column index from enumerate to lookup this columns lenght
         for inner in grid:
             for col, word in enumerate(inner):
-                print(f"{word:{col_len[col]}}", end=" | ")
+                if word in ['Ca', 'Cr', 'Bt', 'Sb', 'Dy']:
+                    word = colored(word, 'magenta')
+                else:
+                    word = colored(word, 'cyan')
+
+                print(f"{colored(word, 'cyan'):{col_len[col]}}", end = " | ")
             print()
-
-
-class PlayGame(object):
-    def __init__(self):
-        # TODO: Play game here with hits etc
-
-        print('IMPLEMENT')
 
 
 class ShipInfo(object):
@@ -268,11 +255,109 @@ class Game(object):
         """Initialises the game by sending players to place ships in their GameInfo
         @return: None """
         self.player = GameInfo('Player 1')
-        # self.bot = GameInfo('BOT')
-        # self.play_game(self.player, self.bot)
+        self.bot = GameInfo('BOT')
+        Game_on = PlayGame(self.player, self.bot)
 
-    def play_game(self, p1, bot):
-        print('implement')
+
+class PlayGame(object):
+    def __init__(self, p1, bot):
+        self.player = p1
+        # self.guesses = p1.guesses
+
+        self.BOT = bot
+        self.BOT.guesses = [f'{j}{i}' for i in list(range(10)) for j in list('ABCDEFGHIJ')]
+        print(self.BOT.hit_pos)
+        self.show_grid()
+
+        while (self.player.HP != 0) and (self.BOT.HP != 0):
+            valid = False
+            while not valid:
+                player_guess = input('Select your hit: ').upper()
+                valid = self.check_hit(player_guess)
+
+            self.update_grids(self.hitter(player_guess), player_guess)
+            # self.check_sunk(self.player)
+            self.bot_backend()
+
+            self.show_grid()
+
+            print(f'BOT health: {self.BOT.HP}')
+            print(f'Player health: {self.player.HP}')
+
+    def check_hit(self, guess):
+        # error if guess has already happened
+        if guess in self.player.guesses:
+            ConsoleOutput.output_error(8)
+            return False
+        # error if guess is not in the grid
+        elif guess not in self.player.hit_grid:
+            ConsoleOutput.output_error(9)
+            return False
+        else:
+            return True
+
+    def hitter(self, guess):
+        self.player.guesses.append(guess)
+
+        # Check if a ship has been hit
+        for ship in self.BOT.hit_pos:
+            for coords in self.BOT.hit_pos[ship]:
+                if guess in coords:
+                    ConsoleOutput.output_message(1, guess)
+                    self.BOT.HP -= 1
+                    ship.hp -= 1
+                    return True
+        else:
+            ConsoleOutput.output_message(2, guess)
+            return False
+
+    def update_grids(self, hit_boo, guess):
+        # update the hit gris first
+        if hit_boo:
+            self.player.hit_grid = np.where(self.player.hit_grid == guess, 'XX', self.player.hit_grid)
+        else:
+            self.player.hit_grid = np.where(self.player.hit_grid == guess, '[]', self.player.hit_grid)
+
+    def show_grid(self):
+        # os.system('cls')
+        filler = np.array([['  ' for i in range(1)] for j in range(10)])
+        filler2 = np.array([['#' for i in range(1)] for j in range(10)])
+
+        new = np.hstack((self.player.ship_grid, filler, filler2, filler, self.player.hit_grid))
+
+        col_len = {i: max(map(len, inner)) for i, inner in enumerate(zip(*new))}
+
+        # print using the column index from enumerate to lookup this columns lenght
+        print(colored(f"\n{15 * ' '}{'--- Ship Grid ---'}{49 * ' '}{'---Hit Grid---'}", 'green'))
+        for inner in new:
+            # print(len(inner))
+            for col, word in enumerate(inner):
+                if word in ['Ca', 'Cr', 'Bt', 'Sb', 'Dy']:
+                    word = colored(word, 'magenta')
+                elif word == 'XX':
+                    word = colored(word, 'red')
+                elif word == '[]':
+                    word = colored(word, 'yellow')
+
+                print(f"{colored(word, 'cyan'):{col_len[col]}}", end = " | ")
+            print()
+
+    def bot_backend(self):
+        # make a selection at random
+        bot_choice = self.BOT.guesses[random.randint(0, len(self.BOT.guesses) - 1)]
+        self.BOT.guesses.remove(bot_choice)
+
+        for ship in self.player.hit_pos:
+            if bot_choice in self.player.hit_pos[ship]:
+                self.player.ship_grid = np.where(self.player.hit_grid == bot_choice, 'XX', self.player.ship_grid)
+                self.player.HP -= 1
+                ship.hp -= 1
+                break
+        else:
+
+            self.player.ship_grid = np.where(self.player.hit_grid == bot_choice, '[]', self.player.ship_grid)
+
+    # def check_sunk(self, player):  #     for ship in player.fleet:  #         if ship.
 
 
 if __name__ == '__main__':
@@ -280,4 +365,3 @@ if __name__ == '__main__':
     Game = Game()
 
     Game.initialise()
-
