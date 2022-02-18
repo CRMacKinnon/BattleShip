@@ -1,4 +1,4 @@
-# Author Callum MacKinnon test
+# Author Callum MacKinnon
 
 import numpy as np
 from termcolor import colored
