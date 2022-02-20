@@ -4,7 +4,7 @@
 # TODO: Add a Finish screen
 # TODO: Change some of the output colours - Magenta for player hit etc
 # TODO: Make BOT more human. ie if hit localise hits.
-# TODO: Add a live debuggers file. Adds grids on every move to file.
+
 
 # TODO: ADD another column to display. For Ship updates -- BOT ships, Player Ships to show what
 #  is dead and what is alive. Maybe make gap from 3 to 2 between ship and hit grid to make space.
@@ -132,11 +132,8 @@ class BotSetUp(object):
         self.HP = 17
         self.guesses = []
         # The players gird
-        self.hit_grid = np.array([[j + str(i) for i in list(range(10))] for j in
-                                  list('ABCDEFGHIJ')])
-
-        self.ship_grid = np.array([[j + str(i) for i in list(range(10))] for j in
-                                   list('ABCDEFGHIJ')])
+        self.hit_grid = Game.grid
+        self.ship_grid = Game.grid
 
         # All possible ships to be stored in the player object: passing name, shorthand and length
         self.carrier = ShipInfo('Carrier', 'Ca', 5, 'green')
@@ -146,12 +143,9 @@ class BotSetUp(object):
         self.destroyer = ShipInfo('Destroyer', 'Dy', 2, 'cyan')
 
         self.fleet = [self.carrier, self.battleship, self.cruiser, self.submarine, self.destroyer]
-        Testing = False
-        if Testing:
-            PreAllocate(self.fleet, self.ship_grid, self.name)
-        else:
+
             # Place the ships now they are object inside the player
-            PlaceFleetBot(self.fleet, self.ship_grid)
+        PlaceFleetBot(self.fleet, self.ship_grid)
 
         self.hit_pos = {ship: ship.position for ship in self.fleet}
 
@@ -360,6 +354,10 @@ class PlaceFleetBot(object):
                 grid_taken.append(spot)
                 choices.remove(spot)
 
+            for idx, location in enumerate(ship.position):
+                i = np.where(self.live_grid == location)
+                self.live_grid[i[0][0]][i[1][0]] = ship.shorthand
+
     def determine_coord(self, start, heading, ship_length, taken_spots):
 
         letters = list('ABCDEFGHIJ')
@@ -453,6 +451,7 @@ class PlayGame(object):
         self.player = p1
         self.BOT = bot
         self.BOT.guesses = [j for i in Game.grid for j in i]
+        print(self.BOT.ship_grid)
 
         self.game_message_buffer = [['Game Output(s)', 'white']]
 
@@ -468,10 +467,11 @@ class PlayGame(object):
 
             os.system(_EXT)
             self.update_grids(self.player_hit_op(player_guess), player_guess)
-            OutputLog(self.player,player_guess,self.player.ship_grid,self.player.hit_grid,self.game_message_buffer)
+            OutputLog(self.player,player_guess,self.player.ship_grid,self.player.hit_grid)
             self.show_grid()
             time.sleep(1)
             self.bot_backend()
+
             time.sleep(1)
             os.system(_EXT)
             self.show_grid()
@@ -562,6 +562,9 @@ class PlayGame(object):
                 self.player.ship_grid = np.where(Game.grid == bot_choice,
                                                  'XX',
                                                  self.player.ship_grid)
+                self.BOT.hit_grid = np.where(self.BOT.hit_grid == bot_choice,
+                                                'XX',
+                                                self.BOT.hit_grid)
                 self.player.HP -= 1
                 ship.hp -= 1
 
@@ -575,7 +578,12 @@ class PlayGame(object):
             self.player.ship_grid = np.where(self.player.hit_grid == bot_choice,
                                              '[]',
                                              self.player.ship_grid)
+            self.BOT.hit_grid = np.where(self.BOT.hit_grid == bot_choice, '[]', self.BOT.hit_grid)
             self.message_buffer(ConsoleOutput.game_message('MISS OP'), 'yellow')
+        OutputLog(self.BOT,
+                  bot_choice,
+                  self.BOT.ship_grid,
+                  self.BOT.hit_grid)
 
     def message_buffer(self, msg, color):
 
@@ -587,7 +595,7 @@ class PlayGame(object):
 
 
 class OutputLog:
-    def __init__(self,player,guess,ship_grid, hit_grid,msg):
+    def __init__(self,player,guess,ship_grid, hit_grid):
         f = open('LOGFILE.txt','a')
         f.write(30 * '=' + '\n')
         f.write(f'{player.name}: {guess}\n\n')
