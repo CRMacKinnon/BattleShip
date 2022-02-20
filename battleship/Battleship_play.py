@@ -16,6 +16,7 @@ import platform
 import numpy as np
 from termcolor import colored, cprint
 import time
+import datetime
 
 if platform.system() == 'Windows':
     _EXT = 'cls'
@@ -28,6 +29,9 @@ os.system(_EXT)
 
 # TODO: Add the postion selection for the bot. Maybe add a differnet class?
 class ConsoleOutput:
+    def __init__(self):
+        pass
+
     @staticmethod
     def output_error(error):
         error_diction = {
@@ -88,7 +92,7 @@ class PlayerSetUp(object):
         self.destroyer = ShipInfo('Destroyer', 'Dy', 2, 'cyan')
 
         self.fleet = [self.carrier, self.battleship, self.cruiser, self.submarine, self.destroyer]
-        Testing = False
+        Testing = True
         if Testing:
             PreAllocate(self.fleet, self.ship_grid, self.name)
         else:
@@ -464,6 +468,7 @@ class PlayGame(object):
 
             os.system(_EXT)
             self.update_grids(self.player_hit_op(player_guess), player_guess)
+            OutputLog(self.player,player_guess,self.player.ship_grid,self.player.hit_grid,self.game_message_buffer)
             self.show_grid()
             time.sleep(1)
             self.bot_backend()
@@ -579,6 +584,21 @@ class PlayGame(object):
         else:
             self.game_message_buffer.pop(-1)
             self.game_message_buffer.insert(1, [msg, color])
+
+
+class OutputLog:
+    def __init__(self,player,guess,ship_grid, hit_grid,msg):
+        f = open('LOGFILE.txt','a')
+        f.write(30 * '=' + '\n')
+        f.write(f'{player.name}: {guess}\n\n')
+        f.write(f'{ship_grid}\n{hit_grid}\n')
+        f.write(30*'='+'\n')
+
+        f.close()
+
+
+
+
 
 
 if __name__ == '__main__':
