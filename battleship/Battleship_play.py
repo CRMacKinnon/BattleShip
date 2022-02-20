@@ -144,7 +144,7 @@ class BotSetUp(object):
 
         self.fleet = [self.carrier, self.battleship, self.cruiser, self.submarine, self.destroyer]
 
-            # Place the ships now they are object inside the player
+        # Place the ships now they are object inside the player
         PlaceFleetBot(self.fleet, self.ship_grid)
 
         self.hit_pos = {ship: ship.position for ship in self.fleet}
@@ -349,7 +349,7 @@ class PlaceFleetBot(object):
                                                      ship.length,
                                                      grid_taken)
 
-            print(f'Ship position is {ship.position}')
+
             for spot in ship.position:
                 grid_taken.append(spot)
                 choices.remove(spot)
@@ -404,11 +404,11 @@ class PlaceFleetBot(object):
 
             for idx in range(1, len(coordinates)):
                 if (coordinates[idx - 1][0] == 'A') and (coordinates[idx][0] == 'J'):
-                    print('crossing')
+
 
                     return False
                 if (coordinates[idx - 1][0] == 'J') and (coordinates[idx][0] == 'A'):
-                    print('crossing')
+
 
                     return False
                 return True
@@ -447,11 +447,9 @@ class Game(object):
 
 class PlayGame(object):
     def __init__(self, p1, bot):
-        # print(Game.grid)
         self.player = p1
         self.BOT = bot
         self.BOT.guesses = [j for i in Game.grid for j in i]
-        print(self.BOT.ship_grid)
 
         self.game_message_buffer = [['Game Output(s)', 'white']]
 
@@ -467,7 +465,7 @@ class PlayGame(object):
 
             os.system(_EXT)
             self.update_grids(self.player_hit_op(player_guess), player_guess)
-            OutputLog(self.player,player_guess,self.player.ship_grid,self.player.hit_grid)
+            OutputLog(self.player, player_guess, self.player.ship_grid, self.player.hit_grid)
             self.show_grid()
             time.sleep(1)
             self.bot_backend()
@@ -475,6 +473,7 @@ class PlayGame(object):
             time.sleep(1)
             os.system(_EXT)
             self.show_grid()
+            self.ship_display_list()
 
     def check_hit(self, guess):
         # error if guess has already happened
@@ -563,8 +562,8 @@ class PlayGame(object):
                                                  'XX',
                                                  self.player.ship_grid)
                 self.BOT.hit_grid = np.where(self.BOT.hit_grid == bot_choice,
-                                                'XX',
-                                                self.BOT.hit_grid)
+                                             'XX',
+                                             self.BOT.hit_grid)
                 self.player.HP -= 1
                 ship.hp -= 1
 
@@ -580,10 +579,7 @@ class PlayGame(object):
                                              self.player.ship_grid)
             self.BOT.hit_grid = np.where(self.BOT.hit_grid == bot_choice, '[]', self.BOT.hit_grid)
             self.message_buffer(ConsoleOutput.game_message('MISS OP'), 'yellow')
-        OutputLog(self.BOT,
-                  bot_choice,
-                  self.BOT.ship_grid,
-                  self.BOT.hit_grid)
+        OutputLog(self.BOT, bot_choice, self.BOT.ship_grid, self.BOT.hit_grid)
 
     def message_buffer(self, msg, color):
 
@@ -593,24 +589,53 @@ class PlayGame(object):
             self.game_message_buffer.pop(-1)
             self.game_message_buffer.insert(1, [msg, color])
 
+    def ship_display_list(self):
+        # TODO: uses string concatenation i.e. str += answer
+        msg_list = ['|Enemy|']
+        for ship in self.BOT.fleet:
+            if ship.hp == 0:
+                msg_list.append(f'{ship.shipname}: SUNK')
+            else:
+                msg_list.append(f'{ship.shipname}: AFLOAT')
+        msg_list.append('|PLAYER|')
+        for ship in self.player.fleet:
+            if ship.hp == 0:
+                msg_list.append('%s: %s'%(ship.shipname,ship.hp*'X'))
+            else:
+                msg_list.append('%s: %s%s'%(ship.shipname,(ship.length-ship.hp)*'X',
+                                            (ship.hp)*'O'))
+
+        print(msg_list)
 
 class OutputLog:
-    def __init__(self,player,guess,ship_grid, hit_grid):
-        f = open('LOGFILE.txt','a')
+    def __init__(self, player, guess, ship_grid, hit_grid):
+        f = open('LOGFILE.txt', 'a')
         f.write(30 * '=' + '\n')
         f.write(f'{player.name}: {guess}\n\n')
         f.write(f'{ship_grid}\n{hit_grid}\n')
-        f.write(30*'='+'\n')
+        f.write(30 * '=' + '\n')
 
         f.close()
 
 
-
-
+class TitlePage(object):
+    # TODO: maybe pass a list of settings through to the game
+    def __init__(self):
+        print(colored(f'-- Welcome to BATTLESHIP --', 'magenta'))
+        print(colored(f'The game where you bet your skills '
+                      f'against another to win the title of master tactician\nDo you have what it '
+                      f'takes '
+                      f'to destroy the enemy\'s fleet and keep your own safe?\n', 'green'))
+        cprint('-- Menu --', 'red')
+        print('Play (P)')
+        print('Play with skip (S)')
+        print('Quit (Q)')
+        cprint('----------', 'red')
+        input('Select an option: ')
 
 
 if __name__ == '__main__':
-
+    # TitlePage()
     Game = Game()
 
     Game.initialise()
