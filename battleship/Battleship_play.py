@@ -101,12 +101,12 @@ class PlayerSetUp(object):
         self.destroyer = ShipInfo('Destroyer', 'Dy', 2, 'cyan')
 
         self.fleet = [self.carrier, self.battleship, self.cruiser, self.submarine, self.destroyer]
-        Testing = True
-        if Testing:
-            PreAllocate(self.fleet, self.ship_grid, self.name)
-        else:
+        # Testing = True
+        # if Testing:
+        #     PreAllocate(self.fleet, self.ship_grid, self.name)
+        # else:
             # Place the ships now they are object inside the player
-            PlaceFleetPlayer(self.fleet, self.ship_grid)
+        PlaceFleetPlayer(self.fleet, self.ship_grid)
 
         self.hit_pos_dict = {ship: ship.position for ship in self.fleet}
 
@@ -447,9 +447,37 @@ class Game(object):
     def initialise(self):
         """Initialises the game by sending players to place ships in their GameInfo
         @return: None """
-        self.player = PlayerSetUp('Player 1')
-        self.bot = BotSetUp('BOT')
+        options = self.settings()
+        if options:
+            self.player = BotSetUp('Player 1')
+            self.bot = BotSetUp('BOT')
+        else:
+            self.player = PlayerSetUp('Player 1')
+            self.bot = BotSetUp('BOT')
+
         PlayGame(self.player, self.bot)
+
+    def settings(self):
+        params = {}
+        print(colored(f'-- Welcome to BATTLESHIP --', 'magenta'))
+        print(colored(f'The game where you bet your skills '
+                      f'against another to win the title of master tactician\nDo you have what it '
+                      f'takes '
+                      f'to destroy the enemy\'s fleet and keep your own safe?\n', 'green'))
+        cprint('-- Menu --', 'red')
+        print('Play (P)')
+        print('Test (T)')
+
+        cprint('----------', 'red')
+        option = False
+        while not option:
+            game = input('Select an option: ').upper()
+            if game in ('P', 'T'):
+                option = True
+
+        if game  == 'T':
+            return True
+
 
 
 class PlayGame(object):
@@ -625,31 +653,8 @@ class PlayGame(object):
         print(msg_list)
 
 
-class TitlePage(object):
-    # TODO: maybe pass a list of settings through to the game
-    def __init__(self):
-        params = {}
-        print(colored(f'-- Welcome to BATTLESHIP --', 'magenta'))
-        print(colored(f'The game where you bet your skills '
-                      f'against another to win the title of master tactician\nDo you have what it '
-                      f'takes '
-                      f'to destroy the enemy\'s fleet and keep your own safe?\n', 'green'))
-        cprint('-- Menu --', 'red')
-        print('Play (P)')
-        print('Test (T)')
-
-        cprint('----------', 'red')
-        option = False
-        while not option:
-            game = input('Select an option: ').upper()
-            if game in ('P', 'T'):
-                option = True
-
-        
-
-
 if __name__ == '__main__':
-    # TitlePage()
+
     Game = Game()
 
     Game.initialise()
