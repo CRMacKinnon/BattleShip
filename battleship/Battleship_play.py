@@ -4,7 +4,7 @@
 # TODO: Add a Finish screen
 # TODO: Change some of the output colours - Magenta for player hit etc
 # TODO: Make BOT more human. ie if hit localise hits.
-
+# TODO: When player wins bot can still make one move. It shouldnt be able to
 
 # TODO: ADD another column to display. For Ship updates -- BOT ships, Player Ships to show what
 #  is dead and what is alive. Maybe make gap from 3 to 2 between ship and hit grid to make space.
