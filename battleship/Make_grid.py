@@ -1,9 +1,10 @@
 import sys
-
+import os
 import pygame
 from pygame.locals import KEYDOWN, K_q
 from scipy import spatial
 
+dir = os.path.dirname(sys.argv[0])
 _SCREENSIZE = _WIDTH, _HEIGHT = 750, 750
 _BLACK = (0, 0, 0)
 _GREY = (160, 160, 160)
@@ -22,11 +23,9 @@ PADDING = 20
 def main():
     pygame.init()
     _VARS['surf'] = pygame.display.set_mode(_SCREENSIZE)
-    drawrect((60, 60, _WIDTH / 1.5, _HEIGHT / 1.5))
-    grid_hit_squares_dict = get_grid_positions((60, 60, _WIDTH / 1.5, _HEIGHT / 1.5))
-
-
-    # Carrier = pygame.image.load('/Users/cal/Downloads/pirate-ship.png')
+    drawrect((60, 60, _WIDTH / 2, _HEIGHT / 2))
+    grid_hit_squares_dict = get_grid_positions((60, 60, _WIDTH / 2, _HEIGHT / 2))
+    print(grid_hit_squares_dict)
 
     img = pygame.transform.scale(pygame.image.load('/Users/cal/Downloads/pirate-ship.png'),
                                    (30,30)).convert()
@@ -51,6 +50,7 @@ def main():
             #         highlightship(grid_hit_squares_dict,ships[0])
             #         ships.remove(ships[0])
             elif event.type == pygame.MOUSEBUTTONDOWN:
+
                 if rect.collidepoint(event.pos):
                     moving = True
             elif event.type == pygame.MOUSEBUTTONUP:
@@ -70,24 +70,15 @@ def main():
                 rect.move_ip(event.rel)
 
         _VARS['surf'].fill(_GREY)
-        drawrect((60, 60, _WIDTH / 1.5, _HEIGHT / 1.5))
-        grid_hit_squares_dict = get_grid_positions((60, 60, _WIDTH / 1.5, _HEIGHT / 1.5))
+        drawrect((60, 60, _WIDTH / 2, _HEIGHT / 2))
+        # drawrect((300, 300, _WIDTH / 4, _HEIGHT / 4))
+
+
         _VARS['surf'].blit(img, rect)
 
         show_mouse_where(grid_hit_squares_dict)
+        find_nearest(pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1],grid_hit_squares_dict)
         pygame.display.update()
-
-
-    # 
-    # while True:
-    # 
-    #     checkevents(grid_hit_squares_dict)
-    #     # mouse_click(grid_hit_squares_dict)
-    #     # changegrid('J9', grid_hit_squares_dict)
-    #     # snap_mouse(grid_hit_squares_dict)
-    #       #     mouse_click(dictn)
-    #
-    #     pygame.display.update()
 
 
 def highlightship(dictn,l):
@@ -129,38 +120,53 @@ def snap_mouse(dictn):
 
 
 def find_nearest(mx, my, dictn):
+
+
     dict_strcorrd = {coord_str: dictn[coord_str][4] for coord_str in dictn}
     list_of_center = [dictn[coord_str][4] for coord_str in dictn]
     tree = spatial.KDTree(list_of_center)
     match = tree.query([(mx, my)])
     result = list(dict_strcorrd.keys())[
         list(dict_strcorrd.values()).index(list_of_center[match[1][0]])]
-    # print(f'match: {match[1]}:{result}')
-    return result
+
+
+
+    font = pygame.font.SysFont('arial', 35)
+    label1 = font.render(f'pos: {result}', True, _BLACK)
+    # label1 = font.render(f'pos: {result}', True, _BLACK)
+
+    rect = label1.get_rect()
+    if 60 < mx < 60 + _WIDTH/2 and 60 < my < 60 + _HEIGHT /2 :
+        pygame.draw.rect(_VARS['surf'], _GREY, [250, 0, rect[2] * 1, rect[3] * 1.3], )
+        _VARS['surf'].blit(label1, (250, 0))
 
 
 def show_mouse_where(dictn):
     mouse = pygame.mouse.get_pos()
     font = pygame.font.SysFont('arial', 35)
     label = font.render(f'x: {mouse[0]} y: {mouse[1]}', True, _BLACK)
-    rect = label.get_rect()
+    label1 = font.render(f'x: 999 y: 999', True, _BLACK)
+    rect = label1.get_rect()
     pygame.draw.rect(_VARS['surf'], _GREY, [rect[0], rect[1], rect[2] * 1.3, rect[3] * 1.3], )
     _VARS['surf'].blit(label, (0, 0))
 
 
 def get_grid_positions(grid_main):
-    grid = {f'{j}{i}': '' for i in range(10) for j in list('ABCDEFGHIJ')}
+    grid = {}
+    print(grid)
 
     start = (grid_main[0], grid_main[1])
     end = (grid_main[2], grid_main[3])
-    for k, LET in zip(range(10), list('ABCDEFGHIJ')):
-        for j in range(10):
+    for xbox, LET in zip(range(10), list('ABCDEFGHIJ')):
+        for ybox in range(10):
 
-            x = (2 * (start[0] + 5 + (j * end[0] / 10)) + ((end[0] / 10) - 8)) / 2
-            y = (2 * (start[1] + 5 + (k * end[0] / 10)) + ((end[0] / 10) - 8)) / 2
+            x = (2 * (start[0] + 5 + (ybox * end[0] / 10)) + ((end[0] / 10) - 8)) / 2
+            y = (2 * (start[1] + 5 + (xbox * end[0] / 10)) + ((end[0] / 10) - 8)) / 2
             r = (x ** 2 + y ** 2) ** 0.5
 
-            grid[f'{LET}{j}'] = [start[0] + 5 + (j * end[0] / 10), start[1] + 5 + (k * end[0] / 10),
+            grid[f'{LET}{ybox}'] = [start[0] + 5 + (xbox * end[0] / 10), start[1] + 5 + (ybox *
+                                                                                          end[
+                0] / 10),
                                  (end[0] / 10) - 8, (end[0] / 10) - 8, (x, y),False]
     return grid
 
