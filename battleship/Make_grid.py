@@ -13,7 +13,7 @@ _VARS = {
     'surf': False
     }
 PADDING = 20
-
+_BOX = (60, 60, _WIDTH/1.6, _HEIGHT/1.6)
 
 # This is the main game loop, it constantly runs until you press the Q KEY
 # or close the window.
@@ -23,20 +23,15 @@ PADDING = 20
 def main():
     pygame.init()
     _VARS['surf'] = pygame.display.set_mode(_SCREENSIZE)
-    drawrect((60, 60, _WIDTH / 2, _HEIGHT / 2))
-    grid_hit_squares_dict = get_grid_positions((60, 60, _WIDTH / 2, _HEIGHT / 2))
-    print(grid_hit_squares_dict)
+    drawrect(_BOX)
+    grid_hit_squares_dict = get_grid_positions(_BOX)
+    # print(grid_hit_squares_dict)
 
     img = pygame.transform.scale(pygame.image.load('/Users/cal/Downloads/pirate-ship.png'),
                                    (30,30)).convert()
-
     rect = img.get_rect()
-
     rect.center = rect[2]/2, rect[3]/2
     moving = False
-
-
-    ships = [5, 4, 3, 3, 2]
 
     while True:
         for event in pygame.event.get():
@@ -45,17 +40,14 @@ def main():
             elif event.type == KEYDOWN and event.key == K_q:
                 pygame.quit()
                 sys.exit()
-            # if event.type == pygame.MOUSEBUTTONDOWN:
-            #     if len(ships)  != 0:
-            #         highlightship(grid_hit_squares_dict,ships[0])
-            #         ships.remove(ships[0])
+
             elif event.type == pygame.MOUSEBUTTONDOWN:
 
                 if rect.collidepoint(event.pos):
                     moving = True
             elif event.type == pygame.MOUSEBUTTONUP:
                 moving = False
-                grid = (60, 60, _WIDTH / 1.5, _HEIGHT / 1.5)
+
                 mouse = pygame.mouse.get_pos()
 
                 result = find_nearest(mouse[0],mouse[1],grid_hit_squares_dict)
@@ -70,9 +62,7 @@ def main():
                 rect.move_ip(event.rel)
 
         _VARS['surf'].fill(_GREY)
-        drawrect((60, 60, _WIDTH / 2, _HEIGHT / 2))
-        # drawrect((300, 300, _WIDTH / 4, _HEIGHT / 4))
-
+        drawrect(_BOX)
 
         _VARS['surf'].blit(img, rect)
 
@@ -83,7 +73,7 @@ def main():
 
 def highlightship(dictn,l):
 
-    grid = (60, 60, _WIDTH / 1.5, _HEIGHT / 1.5)
+    grid = _BOX
     mouse = pygame.mouse.get_pos()
     result = find_nearest(mouse[0],mouse[1],dictn)
     x0,y0,x1,y1 = dictn[result][0],dictn[result][1],dictn[result][2] + dictn[result][0],dictn[result][3] + dictn[result][1]
@@ -111,7 +101,7 @@ def mouse_click(dictn):
 
 
 def snap_mouse(dictn):
-    grid = (60, 60, _WIDTH / 1.5, _HEIGHT / 1.5)
+    grid = _BOX
     mouse = pygame.mouse.get_pos()
     if grid[0] < mouse[0] < (grid[0] + grid[3]) and grid[1] < mouse[1] < (grid[1] + grid[2]):
         result = find_nearest(mouse[0], mouse[1], dictn)
@@ -129,14 +119,12 @@ def find_nearest(mx, my, dictn):
     result = list(dict_strcorrd.keys())[
         list(dict_strcorrd.values()).index(list_of_center[match[1][0]])]
 
-
-
     font = pygame.font.SysFont('arial', 35)
     label1 = font.render(f'pos: {result}', True, _BLACK)
     # label1 = font.render(f'pos: {result}', True, _BLACK)
 
     rect = label1.get_rect()
-    if 60 < mx < 60 + _WIDTH/2 and 60 < my < 60 + _HEIGHT /2 :
+    if 60 < mx <  (_BOX[2] + 60)  and 60 < my <  (_BOX[3] + 60) :
         pygame.draw.rect(_VARS['surf'], _GREY, [250, 0, rect[2] * 1, rect[3] * 1.3], )
         _VARS['surf'].blit(label1, (250, 0))
 
@@ -153,7 +141,7 @@ def show_mouse_where(dictn):
 
 def get_grid_positions(grid_main):
     grid = {}
-    print(grid)
+
 
     start = (grid_main[0], grid_main[1])
     end = (grid_main[2], grid_main[3])
