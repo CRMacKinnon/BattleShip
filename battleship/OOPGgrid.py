@@ -3,6 +3,12 @@ A very simple example showing how to drag an item with the mouse.
 Dragging in this example uses relative mouse movement.
 -Written by Sean J. McKiernan 'Mekire'
 """
+
+# TODO: fix the placement of the ship. CUrrent it snaps to the grid but only to where the mouse
+#  is let go. It should be at a regular intervals along the ship image. i.e. for the carrier of
+#  length 200 pxs there should be 5 lockable positionson the ship at every 40 px for example...
+#  idea: Maybe find where mouse is on the rectangle and find the closest value to it. then center
+#  the rect on the mouse adjusted for the closest point hcosen. THEN SNAP??
 import os
 import sys
 import time
@@ -11,29 +17,35 @@ import pygame as pg
 from pygame.locals import K_q
 from scipy import spatial
 
-CAPTION = "Drag the Red Square"
-SCREEN_SIZE = (750, 750)
+CAPTION = "Place Ships"
+SCREEN_SIZE = _WIDTH, _HEIGHT = 750, 750
+_BLACK = (0, 0, 0)
+_GREY = (160, 160, 160)
+_WHITER = (225, 225, 225)
+
+_BOX = (60, 60, _WIDTH / 1.6, _HEIGHT / 1.6)
 
 
 class Character(object):
     """
     A class to represent our lovable red sqaure.
     """
-    SIZE = (150, 150)
+    SIZE = ((_BOX[2] - _BOX[0] - 40) / 10, 5.2 * ((_BOX[3] - _BOX[1]) / 10))
 
     def __init__(self, pos):
         """
         The argument pos corresponds to the center of our rectangle.
         """
-        self.rect = pg.Rect((0, 0), Character.SIZE)
-        self.rect.center = pos
-        self.text, self.text_rect = self.setup_font()
-        self.click = False
-        self.grid = self.get_grid_positions([30, 30, 300,
-                                             300])  # self.carrier = ShipInfo('Carrier', 'Ca', 5,
-        # 'green')  # self.battleship = ShipInfo('Battleship', 'Bt', 4, 'yellow')  # self.cruiser
-        # = ShipInfo('Cruiser', 'Cr', 3, 'blue')  # self.submarine = ShipInfo('Submarine', 'Sb',
-        # 3, 'magenta')  # self.destroyer = ShipInfo('Destroyer', 'Dy', 2, 'cyan')
+
+        self.grid = self.get_grid_positions(_BOX)
+
+        self.carrier_img = pg.transform.scale(pg.image.load(
+            '/Users/cal/downloads/pirate-ship.png'),Character.SIZE).convert()
+        self.carrier = self.carrier_img.get_rect()
+
+        self.carrier.center = (600, 60)
+        self.click_carrier = False
+        self.carrier_vert = True
 
     def setup_font(self):
         """
@@ -54,19 +66,23 @@ class Character(object):
         pygame.mouse.get_rel must be called on an initial hit so that
         subsequent calls give the correct relative offset.
         """
-        if self.rect.collidepoint(pos):
-            self.click = True
+        # if self.rect.collidepoint(pos):
+        #     self.click = True
+        #     pg.mouse.get_rel()
+        if self.carrier.collidepoint(pos):
+            self.click_carrier = True
             pg.mouse.get_rel()
 
-    def find_nearest(self, mx, my, dictn):
-
+    def find_nearest(self):
+        dictn = self.grid
+        mx, my = pg.mouse.get_pos()
         dict_strcorrd = {coord_str: dictn[coord_str][4] for coord_str in dictn}
         list_of_center = [dictn[coord_str][4] for coord_str in dictn]
         tree = spatial.KDTree(list_of_center)
         match = tree.query([(mx, my)])
         result = list(dict_strcorrd.keys())[
             list(dict_strcorrd.values()).index(list_of_center[match[1][0]])]
-        # print(f'match: {match[1]}:{result}')
+
         return result
 
     def update(self, screen_rect):
@@ -74,18 +90,19 @@ class Character(object):
         If the square is currently clicked, update its position based on the
         relative mouse movement.  Clamp the rect to the screen.
         """
-        if self.click:
-            self.rect.move_ip(pg.mouse.get_rel())
-            self.rect.clamp_ip(screen_rect)
 
-        self.text_rect.center = (self.rect.centerx, self.rect.centery + 90)
+        if self.click_carrier:
+            self.carrier.move_ip(pg.mouse.get_rel())
+            self.carrier.clamp_ip(screen_rect)
+
+            # self.snaptocoord()
 
     def draw(self, surface):
         """
         Blit image and text to the target surface.
         """
-        surface.fill(pg.Color("white"), self.rect)
-        surface.blit(self.text, self.text_rect)
+        surface.blit(self.carrier_img, self.carrier)
+        # surface.fill(pg.Color("white"), self.carrier)  # surface.blit(self.text, self.text_rect)
 
     def drawgrid(self, surface, grid_main):
 
@@ -125,6 +142,44 @@ class Character(object):
                                      (end[0] / 10) - 8, (x, y)]
         return grid
 
+    def snaptocoord(self, ship):
+
+        result = self.find_nearest()
+        x,y,w,h = self.carrier
+        # corners = [(x,y),(x+w,y),(x,y+h),(x+w,y+h)]
+        mx,my = pg.mouse.get_pos()
+        # rel_grab =
+        # ship.x = self.grid[result][4][0] - (Character.SIZE[0] / 2)
+        if self.carrier_vert == True:
+            ship.y = self.grid[result][4][1] - (Character.SIZE[1] / 2) - (my - self.carrier.centery)
+            ship.x = self.grid[result][4][0] - (Character.SIZE[0] / 2)
+        elif self.carrier_vert == False:
+            ship.y = self.grid[result][4][1] - (Character.SIZE[0] / 2) - (my - self.carrier.centery)
+            ship.x = self.grid[result][4][0] - (Character.SIZE[1] / 2)+ ( self.carrier.centerx - mx)
+
+
+
+
+    def rotate(self, ship,surface):
+
+        self.carrier_vert = not self.carrier_vert
+        print(self.carrier_vert)
+        mx,my = pg.mouse.get_pos()
+        self.carrier_img = pg.transform.rotate(self.carrier_img, 90)
+        self.carrier = self.carrier_img.get_rect()
+        self.carrier.center = (mx,my)
+        surface.blit(self.carrier_img, self.carrier)
+
+
+    def show_mouse_where(self,screen):
+        mouse = pg.mouse.get_pos()
+        font = pg.font.SysFont('arial', 35)
+        label = font.render(f'x: {mouse[0]} y: {mouse[1]}', True, _BLACK)
+        label1 = font.render(f'x: 999 y: 999', True, _BLACK)
+        rect = label1.get_rect()
+        pg.draw.rect(screen, _GREY, [rect[0], rect[1], rect[2] * 1.3, rect[3] * 1.3], )
+        screen.blit(label, (0, 0))
+
 
 class App(object):
     """
@@ -136,8 +191,9 @@ class App(object):
         Get a reference to the screen (created in main); define necessary
         attributes; and create our player (draggable rect).
         """
-        self.screen = pg.display.get_surface()
-        self.screen_rect = self.screen.get_rect()
+        self.screen = pg.display.get_surface()  # display screen
+        self.screen_rect = self.screen.get_rect()  # displat screen rectangle
+
         self.clock = pg.time.Clock()
         self.fps = 60
         self.done = False
@@ -152,32 +208,58 @@ class App(object):
         Regardless of the complexity of a program, there should never be a need
         to have more than one event loop.
         """
+        self.mouse = pg.mouse.get_pos()
         for event in pg.event.get():
-
             if event.type == pg.QUIT or self.keys[pg.K_ESCAPE]:
                 self.done = True
             elif event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
                 self.player.check_click(event.pos)
             elif event.type == pg.MOUSEBUTTONUP and event.button == 1:
-                self.player.click = False
+                self.player.click_carrier = False
+                self.player.snaptocoord(self.player.carrier)
             elif event.type == pg.KEYDOWN:
                 self.keys = pg.key.get_pressed()
-                print('pressed')
+                if event.key == pg.K_r and  self.player.click_carrier == True:
+                    self.player.rotate(self.player.carrier_img,self.screen)
+                    print('rotate')
+
 
                 if event.key == K_q:
                     print('q pressed')
                     self.boo = True
+
+    def find_nearest(self, mx, my, dictn):
+        dictn = self.player.grid
+        dict_strcorrd = {coord_str: dictn[coord_str][4] for coord_str in dictn}
+        list_of_center = [dictn[coord_str][4] for coord_str in dictn]
+        tree = spatial.KDTree(list_of_center)
+        match = tree.query([(mx, my)])
+        result = list(dict_strcorrd.keys())[
+            list(dict_strcorrd.values()).index(list_of_center[match[1][0]])]
+
+        return result
+
+    def display_coord(self, Coord):
+        font = pg.font.SysFont('arial', 35)
+        label1 = font.render(f'pos: {Coord}', True, _BLACK)
+        rect = label1.get_rect()
+        if _BOX[0] < self.mouse[0] < (_BOX[2] + _BOX[0]) and _BOX[1] < self.mouse[1] < (
+                _BOX[3] + _BOX[1]):
+            pg.draw.rect(self.screen, _GREY, [250, 0, rect[2] * 1, rect[3] * 1.3], )
+            self.screen.blit(label1, (250, 0))
 
     def render(self):
         """
         All drawing should be found here.
         This is the only place that pygame.display.update() should be found.
         """
-        self.screen.fill(pg.Color("black"))
+        self.screen.fill(_GREY)
+        self.player.show_mouse_where(self.screen)
         self.player.draw(self.screen)
-        self.player.drawgrid(self.screen, [30, 30, 300, 300])
-        # result = self.find_nearest(pg.mouse.get_pos()[0], pg.mouse.get_pos()[1], self.grid)
-        # self.rect.move_ip(self.grid[result][4])
+
+        self.player.drawgrid(self.screen, _BOX)
+        self.display_coord(self.find_nearest(self.mouse[0], self.mouse[1], self.player.grid))
+
         pg.display.update()
 
     def main_loop(self):
@@ -187,11 +269,13 @@ class App(object):
         """
         while not self.done:
             self.event_loop()
+
             if not self.boo:
-                print(self.boo)
+                # print(self.player.carrier.center)
                 self.player.update(self.screen_rect)
                 self.render()
                 self.clock.tick(self.fps)
+
             if self.boo is True and self.playgame is not True:
                 ''' Here place the ships
                 '''
