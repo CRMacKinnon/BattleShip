@@ -24,12 +24,11 @@ _GREY = (160, 160, 160)
 _WHITER = (225, 225, 225)
 
 _BOX = (60, 60, _WIDTH / 1.5, _HEIGHT / 1.5)
-image_dir = os.path.dirname(sys.argv[0]) + '\\images\\'
+image_dir = os.path.dirname(sys.argv[0]) + '/images/'
 
 
 
 class Ships(object):
-
     def __init__(self, image, start_pos, HP, size):
         self.image = pg.transform.scale(pg.image.load(image), size).convert()
         self.rectangle = self.image.get_rect()
@@ -69,17 +68,11 @@ class Character(object):
                                     (660, 60), 2, Ships._size_ship('DESTROYER'))
         self.fleet = [self.carrier_ship,self.destroyer_ship]
 
-    def setup_font(self):
-        """
-        If your text doesn't change it is best to render once, rather than
-        re-render every time you want the text.  Rendering text every frame is
-        a common source of bottlenecks in beginner programs.
-        """
-        font = pg.font.SysFont('timesnewroman', 15)
-        message = "I'm a red square"
-        label = font.render(message, True, pg.Color("white"))
-        label_rect = label.get_rect()
-        return label, label_rect
+
+    def reset_grid_coords(self,positions):
+        for i in positions:
+            self.grid[i][5] = False
+
 
     def check_click(self, pos):
         """
@@ -91,12 +84,13 @@ class Character(object):
 
         if self.carrier_ship.rectangle.collidepoint(pos):
             self.carrier_ship.ship_booleans['click_carrier'] = True
+
             pg.mouse.get_rel()
         elif self.destroyer_ship.rectangle.collidepoint(pos):
             self.destroyer_ship.ship_booleans['click_carrier'] = True
             pg.mouse.get_rel()
 
-    def find_nearest(self, pos=()):
+    def find_nearest_box(self, pos=()):
         dictn = self.grid
         if not pos:
             pos = pg.mouse.get_pos()
@@ -127,12 +121,13 @@ class Character(object):
         """
         Blit image and text to the target surface.
         """
+        self.draw_grid(surface, _BOX)
         surface.blit(self.carrier_ship.image,
                      self.carrier_ship.rectangle)
         surface.blit(self.destroyer_ship.image,
                      self.destroyer_ship.rectangle)
 
-    def drawgrid(self, surface, grid_main):
+    def draw_grid(self, surface, grid_main):
 
         start = (grid_main[0], grid_main[1])
         end = (grid_main[2], grid_main[3])
@@ -160,11 +155,11 @@ class Character(object):
 
                 grid[f'{LET}{j}'] = [start[0] + 5 + (j * end[0] / 10),
                                      start[1] + 5 + (k * end[0] / 10),
-                                     (end[0] / 10) - 8, (end[0] / 10) - 8, (x, y)]
+                                     (end[0] / 10) - 8, (end[0] / 10) - 8, (x, y),False]
         return grid
 
-    def snaptocoord(self, ship_obj):
-        result = self.find_nearest(ship_obj.rectangle.center)
+    def ship_snap_to_box(self, ship_obj):
+        result = self.find_nearest_box(ship_obj.rectangle.center)
 
         if ship_obj.ship_booleans['vertical']:
             if ship_obj.ship_hp % 2 == 0:
@@ -202,7 +197,22 @@ class Character(object):
             elif ship_obj.rectangle.left < _BOX[0]:  #
                 ship_obj.rectangle.left = _BOX[0] + 2
 
-    def rotate(self, ship_obj, surface):
+        p = self.destroyer_ship.rectangle
+        ul, ur, ll, lr = p.topleft, p.topright, p.bottomleft, p.bottomright
+        if self.carrier_ship.rectangle.collidepoint(ul):
+            dx = self.carrier_ship.rectangle.bottomright[0] - ul[0]
+            dy = self.carrier_ship.rectangle.bottomright[1] - ul[1]
+            self.destroyer_ship.rectangle.topleft =(ul[0] +dx,ul[1]+dy)
+
+
+
+
+
+
+
+
+
+    def rotate_ship(self, ship_obj, surface):
 
         ship_obj.ship_booleans['vertical'] = not ship_obj.ship_booleans['vertical']
 
@@ -212,14 +222,18 @@ class Character(object):
         ship_obj.rectangle.center = (mx, my)
         surface.blit(ship_obj.image, ship_obj.rectangle)
 
-    def ship_overlap(self, screen,fleet):
+    def display_ship_placement(self, screen, fleet):
         for j, ship_obj in enumerate(fleet):
             overlap = []
             for i in self.grid:
                 r = pg.Rect.colliderect(ship_obj.rectangle, self.grid[i][:4])
                 if r is True:
                     overlap.append(i)
+
             ship_obj.position = overlap
+
+            for str in ship_obj.position:
+                self.grid[str][5] = True
 
             font = pg.font.SysFont('arial', 15)
             label1 = font.render(f'overlap: {ship_obj.position}', True, _BLACK)
@@ -227,9 +241,9 @@ class Character(object):
             pg.draw.rect(screen, _GREY, [100, 600 + (20*j), rect[2] * 1, rect[3] * 1.3], )
             screen.blit(label1, (100, 600 + (20*j)))
 
-        # print(self.carrier_ship.position)
 
-    def show_mouse_where(self, screen):
+
+    def display_mouse_position(self, screen):
         mouse = pg.mouse.get_pos()
         font = pg.font.SysFont('arial', 20)
         label = font.render(f'x: {mouse[0]} y: {mouse[1]}', True, _BLACK)
@@ -238,7 +252,7 @@ class Character(object):
         pg.draw.rect(screen, _GREY, [rect[0], rect[1], rect[2] * 1.3, rect[3] * 1.3], )
         screen.blit(label, (0, 0))
 
-    def display_coord(self, Coord, screen):
+    def display_mouse_box(self, Coord, screen):
         mouse = pg.mouse.get_pos()
         font = pg.font.SysFont('arial', 15)
         label1 = font.render(f'pos: {Coord} - {self.grid[Coord][:4]}', True, _BLACK)
@@ -285,12 +299,12 @@ class App(object):
                 for ship in self.player.fleet:
                     if ship.ship_booleans['click_carrier'] == True :
                         ship.ship_booleans['click_carrier'] = False
-                        self.player.snaptocoord(ship)
+                        self.player.ship_snap_to_box(ship)
             elif event.type == pg.KEYDOWN:
                 self.keys = pg.key.get_pressed()
                 for ship_obj in self.player.fleet:
                     if event.key == pg.K_r and ship_obj.ship_booleans['click_carrier'] == True:
-                        self.player.rotate(ship_obj, self.screen)
+                        self.player.rotate_ship(ship_obj, self.screen)
                         print('rotate')
 
                 if event.key == K_q:
@@ -303,12 +317,18 @@ class App(object):
         This is the only place that pygame.display.update() should be found.
         """
         self.screen.fill(_GREY)
-        self.player.drawgrid(self.screen, _BOX)
-        self.player.show_mouse_where(self.screen)
-        self.player.ship_overlap(self.screen,self.player.fleet)
+
+        self.player.display_mouse_position(self.screen)
         self.player.draw(self.screen)
 
-        self.player.display_coord(self.player.find_nearest(), self.screen)
+        self.player.display_mouse_box(self.player.find_nearest_box(), self.screen)
+        self.player.display_ship_placement(self.screen, self.player.fleet)
+
+        if self.player.destroyer_ship.rectangle.colliderect(self.player.carrier_ship.rectangle):
+            print('OVERLAP')
+
+
+
 
         pg.display.update()
 
