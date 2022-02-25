@@ -2,11 +2,8 @@
 16.45
 '''
 
-# TODO: fix the placement of the ship. CUrrent it snaps to the grid but only to where the mouse
-#  is let go. It should be at a regular intervals along the ship image. i.e. for the carrier of
-#  length 200 pxs there should be 5 lockable positionson the ship at every 40 px for example...
-#  idea: Maybe find where mouse is on the rectangle and find the closest value to it. then center
-#  the rect on the mouse adjusted for the closest point hcosen. THEN SNAP??
+# TODO: check inside the original snap function and add to each if statement. Check for the
+#  closest result with a flase stamemt in self.grid.
 
 import os
 import sys
