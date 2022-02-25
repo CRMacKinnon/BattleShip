@@ -7,13 +7,15 @@
 #  length 200 pxs there should be 5 lockable positionson the ship at every 40 px for example...
 #  idea: Maybe find where mouse is on the rectangle and find the closest value to it. then center
 #  the rect on the mouse adjusted for the closest point hcosen. THEN SNAP??
+
 import os
 import sys
 import time
-
+import numpy
 import pygame as pg
 from pygame.locals import K_q
 from scipy import spatial
+
 
 CAPTION = "Place Ships"
 SCREEN_SIZE = _WIDTH, _HEIGHT = 750, 750
@@ -21,22 +23,31 @@ _BLACK = (0, 0, 0)
 _GREY = (160, 160, 160)
 _WHITER = (225, 225, 225)
 
-_BOX = (60, 60, _WIDTH / 1.6, _HEIGHT / 1.6)
+_BOX = (60, 60, _WIDTH / 1.5, _HEIGHT / 1.5)
+image_dir = os.path.dirname(sys.argv[0]) + '\\images\\'
+
 
 
 class Ships(object):
-    _SIZE_CARRIER = ((_BOX[2] - _BOX[0] - 40) / 10, 5 * ((_BOX[3]) / 10) - 4)
-    Destroyer_SIZE = ((_BOX[2] - _BOX[0] - 40) / 10, 2 * ((_BOX[3]) / 10) - 4)
 
-    def __init__(self, image, start_pos, HP):
-        self.image = pg.transform.scale(pg.image.load(image), Ships._SIZE_CARRIER).convert()
+    def __init__(self, image, start_pos, HP, size):
+        self.image = pg.transform.scale(pg.image.load(image), size).convert()
         self.rectangle = self.image.get_rect()
-        self.rectangle.center = start_pos
-        self.click_carrier = False
-        self.carrier_hp = HP
-        self.carrier_vert = True
-        self.carrier_on_grid = False
-        self.boo_dict = {}
+        self.rectangle.centerx = start_pos[0]
+        self.rectangle.top = start_pos[1]
+        self.position = []
+        # self.click_carrier = False
+        self.ship_hp = HP
+        # self.carrier_vert = True
+        # self.carrier_on_grid = False
+        self.ship_booleans = {'click_carrier': False, 'vertical': True, 'On_Grid': False}
+
+
+    @staticmethod
+    def _size_ship(ship):
+        _SIZE_SHIP = {'CARRIER': ((_BOX[2] - _BOX[0] - 40) / 10, 5 * ((_BOX[3]) / 10) - 4),
+                      'DESTROYER': ((_BOX[2] - _BOX[0] - 40) / 10, 2 * ((_BOX[3]) / 10) - 4)}
+        return _SIZE_SHIP[ship]
 
 
 class Character(object):
@@ -51,8 +62,12 @@ class Character(object):
         """
 
         self.grid = self.get_grid_positions(_BOX)
-        self.carrier_ship = Ships('C:\\Users\\callu\\iCloudDrive\\Games\\battleship\\pirate-ship.png', (600, 60),
-                                  4)  # # self.carrier_img =  # pg.transform.scale(  #  #  #  #  # pg.image.load('/Users/cal/downloads/pirate-ship.png'),  #  # Character.SIZE).convert()  # self.carrier = self.carrier_img.get_rect()  #  #  # self.carrier.center = (600,  # 60)  # self.click_carrier = False  # self.carrier_Hp = 4  #  # self.carrier_vert = True  # self.carrier_on_grid = False
+        self.carrier_ship = Ships(image_dir + 'pirate-ship.png', (600, 60), 5,
+                                  Ships._size_ship('CARRIER'))
+
+        self.destroyer_ship = Ships(image_dir + 'destroyer.png',
+                                    (660, 60), 2, Ships._size_ship('DESTROYER'))
+        self.fleet = [self.carrier_ship,self.destroyer_ship]
 
     def setup_font(self):
         """
@@ -75,10 +90,13 @@ class Character(object):
         """
 
         if self.carrier_ship.rectangle.collidepoint(pos):
-            self.carrier_ship.click_carrier = True
+            self.carrier_ship.ship_booleans['click_carrier'] = True
+            pg.mouse.get_rel()
+        elif self.destroyer_ship.rectangle.collidepoint(pos):
+            self.destroyer_ship.ship_booleans['click_carrier'] = True
             pg.mouse.get_rel()
 
-    def find_nearest(self, pos = ()):
+    def find_nearest(self, pos=()):
         dictn = self.grid
         if not pos:
             pos = pg.mouse.get_pos()
@@ -86,7 +104,8 @@ class Character(object):
         list_of_center = [dictn[coord_str][4] for coord_str in dictn]
         tree = spatial.KDTree(list_of_center)
         match = tree.query([(pos[0], pos[1])])
-        result = list(dict_strcorrd.keys())[list(dict_strcorrd.values()).index(list_of_center[match[1][0]])]
+        result = list(dict_strcorrd.keys())[
+            list(dict_strcorrd.values()).index(list_of_center[match[1][0]])]
 
         return result
 
@@ -96,16 +115,22 @@ class Character(object):
         relative mouse movement.  Clamp the rect to the screen.
         """
 
-        if self.carrier_ship.click_carrier:
+        if self.carrier_ship.ship_booleans['click_carrier']:
             self.carrier_ship.rectangle.move_ip(pg.mouse.get_rel())
             self.carrier_ship.rectangle.clamp_ip(screen_rect)
+
+        elif self.destroyer_ship.ship_booleans['click_carrier']:
+            self.destroyer_ship.rectangle.move_ip(pg.mouse.get_rel())
+            self.destroyer_ship.rectangle.clamp_ip(screen_rect)
 
     def draw(self, surface):
         """
         Blit image and text to the target surface.
         """
         surface.blit(self.carrier_ship.image,
-                     self.carrier_ship.rectangle)  # surface.fill(pg.Color("white"),  # self.carrier)  #  #  #  #  # surface.blit(self.text, self.text_rect)
+                     self.carrier_ship.rectangle)
+        surface.blit(self.destroyer_ship.image,
+                     self.destroyer_ship.rectangle)
 
     def drawgrid(self, surface, grid_main):
 
@@ -129,82 +154,80 @@ class Character(object):
         end = (grid_main[2], grid_main[3])
         for k, LET in zip(range(10), list('ABCDEFGHIJ')):
             for j in range(10):
-
                 x = (2 * (start[0] + 5 + (j * end[0] / 10)) + ((end[0] / 10) - 8)) / 2
                 y = (2 * (start[1] + 5 + (k * end[0] / 10)) + ((end[0] / 10) - 8)) / 2
                 r = (x ** 2 + y ** 2) ** 0.5
 
-                grid[f'{LET}{j}'] = [start[0] + 5 + (j * end[0] / 10), start[1] + 5 + (k * end[0] / 10),
+                grid[f'{LET}{j}'] = [start[0] + 5 + (j * end[0] / 10),
+                                     start[1] + 5 + (k * end[0] / 10),
                                      (end[0] / 10) - 8, (end[0] / 10) - 8, (x, y)]
         return grid
 
-    def snaptocoord(self, ship):
-        result = self.find_nearest(self.carrier_ship.rectangle.center)
+    def snaptocoord(self, ship_obj):
+        result = self.find_nearest(ship_obj.rectangle.center)
 
-        if self.carrier_ship.carrier_vert:
-            if not (self.carrier_ship.carrier_hp % 2 == 0):
-                if (self.carrier_ship.rectangle.centery - self.grid[result][4][1]) <= 0:
-                    ship.centery = self.grid[result][4][1] - (self.grid[result][3] / 2) - 4
+        if ship_obj.ship_booleans['vertical']:
+            if ship_obj.ship_hp % 2 == 0:
+                if (ship_obj.rectangle.centery - self.grid[result][4][1]) <= 0:
+                    ship_obj.rectangle.centery = self.grid[result][4][1] - (self.grid[result][3] / 2) - 4
                 else:
-                    ship.centery = self.grid[result][4][1] + (self.grid[result][3] / 2) + 4
-                ship.centerx = self.grid[result][4][0]
+                    ship_obj.rectangle.centery = self.grid[result][4][1] + (self.grid[result][3] / 2) + 4
+                ship_obj.rectangle.centerx = self.grid[result][4][0]
 
-                if self.carrier_ship.rectangle.top < _BOX[0]:
-                    ship.top = _BOX[0] + 2
-                elif self.carrier_ship.rectangle.bottom > _BOX[1] + _BOX[3]:
-                    ship.bottom = _BOX[0] + _BOX[3] - 2
-            else:  # odd ship length
+            else:  # odd ship length and is vertical
 
-                ship.centerx = self.grid[result][4][0]
-                ship.centery = self.grid[result][4][1]
+                ship_obj.rectangle.centerx = self.grid[result][4][0]
+                ship_obj.rectangle.centery = self.grid[result][4][1]
 
-                if self.carrier_ship.rectangle.top < _BOX[0]:
-                    ship.top = _BOX[0] + 2  #
-                elif self.carrier_ship.rectangle.bottom > _BOX[1] + _BOX[3]:
-                    ship.bottom = _BOX[0] + _BOX[3] - 2
+            if ship_obj.rectangle.top < _BOX[0]:
+                ship_obj.rectangle.top = _BOX[0] + 2
+            elif ship_obj.rectangle.bottom > _BOX[1] + _BOX[3]:
+                ship_obj.rectangle.bottom = _BOX[0] + _BOX[3] - 1
 
-            # if self.carrier_ship.rectangle.top < _BOX[0]:  #     ship.top = _BOX[0] + 2  # elif  # self.carrier_ship.rectangle.bottom > _BOX[1] + _BOX[3]:  #     ship.bottom = _BOX[  # 0] + _BOX[3] - 2
+        elif not ship_obj.ship_booleans['vertical']:
 
-        elif not self.carrier_ship.carrier_vert:
-
-            if not (self.carrier_ship.carrier_hp % 2 == 0):
-                if (self.carrier_ship.rectangle.centerx - self.grid[result][4][0]) <= 0:
-                    ship.centerx = self.grid[result][4][0] - (self.grid[result][2] / 2) - 4
+            if ship_obj.ship_hp % 2 == 0:
+                if (ship_obj.rectangle.centerx - self.grid[result][4][0]) <= 0:
+                    ship_obj.rectangle.centerx = self.grid[result][4][0] - (self.grid[result][2] / 2) - 4
                 else:
-                    ship.centerx = self.grid[result][4][0] + (self.grid[result][2] / 2) + 4
-                ship.centery = self.grid[result][4][1]
-            else:
-                ship.centery = self.grid[result][4][1]
-                ship.centerx = self.grid[result][4][0]
+                    ship_obj.rectangle.centerx = self.grid[result][4][0] + (self.grid[result][2] / 2) + 4
+                ship_obj.rectangle.centery = self.grid[result][4][1]
 
-                if self.carrier_ship.rectangle.right > _BOX[0] + _BOX[2]:  # #  #  #
-                    ship.right = _BOX[0] + _BOX[2] - 2  #
-                elif self.carrier_ship.rectangle.left < _BOX[0]:  #
-                    ship.left = _BOX[0] + 2
+            else:  # odd ship length and is vertical
+                ship_obj.rectangle.centery = self.grid[result][4][1]
+                ship_obj.rectangle.centerx = self.grid[result][4][0]
 
-    def rotate(self, ship, surface):
+            if ship_obj.rectangle.right > _BOX[0] + _BOX[2]:  # #  #  #
+                ship_obj.rectangle.right = _BOX[0] + _BOX[2] - 2  #
+            elif ship_obj.rectangle.left < _BOX[0]:  #
+                ship_obj.rectangle.left = _BOX[0] + 2
 
-        self.carrier_ship.carrier_vert = not self.carrier_ship.carrier_vert
+    def rotate(self, ship_obj, surface):
+
+        ship_obj.ship_booleans['vertical'] = not ship_obj.ship_booleans['vertical']
 
         mx, my = pg.mouse.get_pos()
-        self.carrier_ship.image = pg.transform.rotate(self.carrier_ship.image, 90)
-        self.carrier_ship.rectangle = self.carrier_ship.image.get_rect()
-        self.carrier_ship.rectangle.center = (mx, my)
-        surface.blit(self.carrier_ship.image, self.carrier_ship.rectangle)
+        ship_obj.image = pg.transform.rotate(ship_obj.image, 90)
+        ship_obj.rectangle = ship_obj.image.get_rect()
+        ship_obj.rectangle.center = (mx, my)
+        surface.blit(ship_obj.image, ship_obj.rectangle)
 
-    def ship_overlap(self, screen):
-        overlap = []
-        for i in self.grid:
-            r = pg.Rect.colliderect(self.carrier_ship.rectangle, self.grid[i][:4])
-            if r is True:
-                overlap.append(i)
+    def ship_overlap(self, screen,fleet):
+        for j, ship_obj in enumerate(fleet):
+            overlap = []
+            for i in self.grid:
+                r = pg.Rect.colliderect(ship_obj.rectangle, self.grid[i][:4])
+                if r is True:
+                    overlap.append(i)
+            ship_obj.position = overlap
 
-        font = pg.font.SysFont('arial', 15)
-        label1 = font.render(f'overlap: {overlap}', True, _BLACK)
-        rect = label1.get_rect()
+            font = pg.font.SysFont('arial', 15)
+            label1 = font.render(f'overlap: {ship_obj.position}', True, _BLACK)
+            rect = label1.get_rect()
+            pg.draw.rect(screen, _GREY, [100, 600 + (20*j), rect[2] * 1, rect[3] * 1.3], )
+            screen.blit(label1, (100, 600 + (20*j)))
 
-        pg.draw.rect(screen, _GREY, [100, 600, rect[2] * 1, rect[3] * 1.3], )
-        screen.blit(label1, (100, 600))
+        # print(self.carrier_ship.position)
 
     def show_mouse_where(self, screen):
         mouse = pg.mouse.get_pos()
@@ -237,7 +260,6 @@ class App(object):
         """
         self.screen = pg.display.get_surface()  # display screen
         self.screen_rect = self.screen.get_rect()  # displat screen rectangle
-
         self.clock = pg.time.Clock()
         self.fps = 60
         self.done = False
@@ -258,14 +280,18 @@ class App(object):
                 self.done = True
             elif event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
                 self.player.check_click(event.pos)
+
             elif event.type == pg.MOUSEBUTTONUP and event.button == 1:
-                self.player.carrier_ship.click_carrier = False
-                self.player.snaptocoord(self.player.carrier_ship.rectangle)
+                for ship in self.player.fleet:
+                    if ship.ship_booleans['click_carrier'] == True :
+                        ship.ship_booleans['click_carrier'] = False
+                        self.player.snaptocoord(ship)
             elif event.type == pg.KEYDOWN:
                 self.keys = pg.key.get_pressed()
-                if event.key == pg.K_r and self.player.carrier_ship.click_carrier == True:
-                    self.player.rotate(self.player.carrier_ship.image, self.screen)
-                    print('rotate')
+                for ship_obj in self.player.fleet:
+                    if event.key == pg.K_r and ship_obj.ship_booleans['click_carrier'] == True:
+                        self.player.rotate(ship_obj, self.screen)
+                        print('rotate')
 
                 if event.key == K_q:
                     print('q pressed')
@@ -279,7 +305,7 @@ class App(object):
         self.screen.fill(_GREY)
         self.player.drawgrid(self.screen, _BOX)
         self.player.show_mouse_where(self.screen)
-        self.player.ship_overlap(self.screen)
+        self.player.ship_overlap(self.screen,self.player.fleet)
         self.player.draw(self.screen)
 
         self.player.display_coord(self.player.find_nearest(), self.screen)
