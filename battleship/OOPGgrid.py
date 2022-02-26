@@ -26,9 +26,11 @@ image_dir = os.path.dirname(sys.argv[0]) + '/images/'
 
 
 class Ships(object):
-    def __init__(self, image, start_pos, HP, size):
+    def __init__(self, name,image, start_pos, HP, size):
         self.image = pg.transform.scale(pg.image.load(image), size).convert()
+        self.name = name
         self.rectangle = self.image.get_rect()
+        self.start = start_pos
         self.rectangle.centerx = start_pos[0]
         self.rectangle.top = start_pos[1]
         self.position = []
@@ -42,7 +44,10 @@ class Ships(object):
     @staticmethod
     def _size_ship(ship):
         _SIZE_SHIP = {'CARRIER': ((_BOX[2] - _BOX[0] - 40) / 10, 5 * ((_BOX[3]) / 10) - 4),
-                      'DESTROYER': ((_BOX[2] - _BOX[0] - 40) / 10, 2 * ((_BOX[3]) / 10) - 4)}
+                      'BATTLESHIP': ((_BOX[2] - _BOX[0] - 40) / 10, 4 * ((_BOX[3]) / 10) - 4),
+                      'CRUISER': ((_BOX[2] - _BOX[0] - 40) / 10, 3 * ((_BOX[3]) / 10) - 4),
+                      'SUBMARINE': ((_BOX[2] - _BOX[0] - 40) / 10, 3 * ((_BOX[3]) / 10) - 4),
+                      'DESTROYER': ((_BOX[2] - _BOX[0] - 40) / 10, 2 * ((_BOX[3]) / 10) - 4),}
         return _SIZE_SHIP[ship]
 
 
@@ -58,17 +63,28 @@ class Character(object):
         """
 
         self.grid = self.get_grid_positions(_BOX)
-        self.carrier_ship = Ships(image_dir + 'pirate-ship.png', (600, 60), 5,
+
+        self.carrier_ship = Ships('Carrier',image_dir + 'Carrier.png', (600, 60), 5,
                                   Ships._size_ship('CARRIER'))
 
-        self.destroyer_ship = Ships(image_dir + 'destroyer.png',
+        self.battleship_ship = Ships('Battleship',image_dir + 'Battleship.png', (660, 180), 4,
+                                  Ships._size_ship('BATTLESHIP'))
+
+        self.cruiser_ship = Ships('Cruiser',
+                                     image_dir + 'cruiser.png',
+                                     (600, 330),
+                                     3,
+                                     Ships._size_ship('CRUISER'))
+
+        self.submarine_ship = Ships('Submarine',
+                                     image_dir + 'Submarine.png',
+                                     (660, 400),
+                                     3,
+                                     Ships._size_ship('SUBMARINE'))
+
+        self.destroyer_ship = Ships('Destroyer',image_dir + 'destroyer.png',
                                     (660, 60), 2, Ships._size_ship('DESTROYER'))
-        self.fleet = [self.carrier_ship,self.destroyer_ship]
-
-
-    def reset_grid_coords(self,positions):
-        for i in positions:
-            self.grid[i][5] = False
+        self.fleet = [self.carrier_ship,self.battleship_ship,self.cruiser_ship,self.destroyer_ship,self.submarine_ship ]
 
 
     def check_click(self, pos):
@@ -78,14 +94,18 @@ class Character(object):
         pygame.mouse.get_rel must be called on an initial hit so that
         subsequent calls give the correct relative offset.
         """
-
-        if self.carrier_ship.rectangle.collidepoint(pos):
-            self.carrier_ship.ship_booleans['click_carrier'] = True
-
-            pg.mouse.get_rel()
-        elif self.destroyer_ship.rectangle.collidepoint(pos):
-            self.destroyer_ship.ship_booleans['click_carrier'] = True
-            pg.mouse.get_rel()
+        for ship_obj in self.fleet:
+            if ship_obj.rectangle.collidepoint(pos):
+                ship_obj.ship_booleans['click_carrier'] = True
+                pg.mouse.get_rel()
+                # moves the ship to the end of the fleet list. Which will then render last and will
+                # be the most front object
+                self.fleet.append(self.fleet.pop(self.fleet.index(ship_obj)))
+        #
+        # elif self.destroyer_ship.rectangle.collidepoint(pos):
+        #     self.destroyer_ship.ship_booleans['click_carrier'] = True
+        #     pg.mouse.get_rel()
+        #     self.fleet.append(self.fleet.pop(self.fleet.index(self.destroyer_ship)))
 
     def find_nearest_box(self, pos=()):
         dictn = self.grid
@@ -105,24 +125,21 @@ class Character(object):
         If the square is currently clicked, update its position based on the
         relative mouse movement.  Clamp the rect to the screen.
         """
-
-        if self.carrier_ship.ship_booleans['click_carrier']:
-            self.carrier_ship.rectangle.move_ip(pg.mouse.get_rel())
-            self.carrier_ship.rectangle.clamp_ip(screen_rect)
-
-        elif self.destroyer_ship.ship_booleans['click_carrier']:
-            self.destroyer_ship.rectangle.move_ip(pg.mouse.get_rel())
-            self.destroyer_ship.rectangle.clamp_ip(screen_rect)
+        for ship_obj in self.fleet:
+            if ship_obj.ship_booleans['click_carrier']:
+                ship_obj.rectangle.move_ip(pg.mouse.get_rel())
+                ship_obj.rectangle.clamp_ip(screen_rect)
 
     def draw(self, surface):
         """
         Blit image and text to the target surface.
         """
+
         self.draw_grid(surface, _BOX)
-        surface.blit(self.carrier_ship.image,
-                     self.carrier_ship.rectangle)
-        surface.blit(self.destroyer_ship.image,
-                     self.destroyer_ship.rectangle)
+        for ship_obj in self.fleet:
+            surface.blit(ship_obj.image,
+                         ship_obj.rectangle)
+
 
     def draw_grid(self, surface, grid_main):
 
@@ -194,32 +211,36 @@ class Character(object):
             elif ship_obj.rectangle.left < _BOX[0]:  #
                 ship_obj.rectangle.left = _BOX[0] + 2
 
-        p = self.destroyer_ship.rectangle
-        ul, ur, ll, lr = p.topleft, p.topright, p.bottomleft, p.bottomright
-        if self.carrier_ship.rectangle.collidepoint(ul):
-            dx = self.carrier_ship.rectangle.bottomright[0] - ul[0]
-            dy = self.carrier_ship.rectangle.bottomright[1] - ul[1]
-            self.destroyer_ship.rectangle.topleft =(ul[0] +dx,ul[1]+dy)
+        # reset to original position if overlapping
+        for ships in self.fleet:
+            if ship_obj == ships:
+                continue
+            if ship_obj.rectangle.colliderect(ships.rectangle):
 
+                if ship_obj.ship_booleans['vertical'] == False:
+                    ship_obj.image = pg.transform.rotate(ship_obj.image, 90)
+                    ship_obj.rectangle = ship_obj.image.get_rect()
+                    ship_obj.ship_booleans['vertical'] =True
 
-
-
-
-
-
-
+                ship_obj.rectangle.centerx = ship_obj.start[0]
+                ship_obj.rectangle.top = ship_obj.start[1]
+                break
 
     def rotate_ship(self, ship_obj, surface):
 
         ship_obj.ship_booleans['vertical'] = not ship_obj.ship_booleans['vertical']
 
         mx, my = pg.mouse.get_pos()
-        ship_obj.image = pg.transform.rotate(ship_obj.image, 90)
+        if  ship_obj.ship_booleans['vertical'] == True:
+            ship_obj.image = pg.transform.rotate(ship_obj.image, 90)
+        else:
+            ship_obj.image = pg.transform.rotate(ship_obj.image, -90)
         ship_obj.rectangle = ship_obj.image.get_rect()
         ship_obj.rectangle.center = (mx, my)
         surface.blit(ship_obj.image, ship_obj.rectangle)
 
     def display_ship_placement(self, screen, fleet):
+
         for j, ship_obj in enumerate(fleet):
             overlap = []
             for i in self.grid:
@@ -233,7 +254,7 @@ class Character(object):
                 self.grid[str][5] = True
 
             font = pg.font.SysFont('arial', 15)
-            label1 = font.render(f'overlap: {ship_obj.position}', True, _BLACK)
+            label1 = font.render(f'{ship_obj.name}: {ship_obj.position}', True, _BLACK)
             rect = label1.get_rect()
             pg.draw.rect(screen, _GREY, [100, 600 + (20*j), rect[2] * 1, rect[3] * 1.3], )
             screen.blit(label1, (100, 600 + (20*j)))
@@ -321,8 +342,7 @@ class App(object):
         self.player.display_mouse_box(self.player.find_nearest_box(), self.screen)
         self.player.display_ship_placement(self.screen, self.player.fleet)
 
-        if self.player.destroyer_ship.rectangle.colliderect(self.player.carrier_ship.rectangle):
-            print('OVERLAP')
+
 
 
 
