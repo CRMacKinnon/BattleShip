@@ -399,21 +399,13 @@ class App(object):
                 self.clock.tick(self.fps)
                 self.done = self.player.check_all_place()
 
-            if self.boo is True and self.playgame is not True:
-                ''' Here place the ships
-                '''
-
-                print('in the game now')
-                self.screen.fill(_GREY)
-                self.playgame = True
-                pg.display.update()
         PlayGame().game_main_loop()
-
 
 class PlayGame(App):
     def __init__(self):
         super().__init__()
         print(self.player.destroyer_ship.name)
+        print('in playgame')
 
 
     def game_render(self):
@@ -421,14 +413,18 @@ class PlayGame(App):
         All drawing should be found here.
         This is the only place that pygame.display.update() should be found.
         """
+        self.screen.fill(_GREY)
+
+        self.player.display_mouse_position(self.screen)
         pg.display.update()
 
     def game_main_loop(self):
         while True:
 
             self.screen.fill(_BLACK)
+            self.event_loop()
             # self.player.update(self.screen_rect)
-            # self.game_render()
+            self.game_render()
             self.clock.tick(self.fps)
             pg.display.update()
 
@@ -442,6 +438,7 @@ def main():
     pg.display.set_caption(CAPTION)
     pg.display.set_mode(SCREEN_SIZE)
     App().main_loop()
+    # PlayGame().game_main_loop()
     pg.quit()
     sys.exit()
 
