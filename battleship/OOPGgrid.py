@@ -335,7 +335,7 @@ class App(object):
         self.screen_rect = self.screen.get_rect()  # displat screen rectangle
         self.clock = pg.time.Clock()
         self.fps = 60
-        self.done = False
+        self.done = True
         self.keys = pg.key.get_pressed()
         self.player = PlaceShips(self.screen_rect.center)
         self.boo = False
@@ -397,8 +397,10 @@ class PlayGame(App):
         super().__init__()
         self.mouse = None
         self.game_done = False
-        self.ship_grid_box = ()
-        self.ship_hit_box = ()
+        self.ship_grid_box = (30, 30, _WIDTH / 2.5, _HEIGHT / 2.5)
+        self.ship_grid_dict= {}
+        self.ship_hit_box = (750-60 - _WIDTH / 2.5, 30, _WIDTH / 2.5, _HEIGHT / 2.5)
+        self.ship_hit_dict = {}
 
     def game_event_loop(self):
         """
@@ -408,22 +410,49 @@ class PlayGame(App):
         """
         self.mouse = pg.mouse.get_pos()
 
-        for event in pg.event.get():
-            if event.type == pg.QUIT or self.keys[pg.K_ESCAPE]:
+        for gme_event in pg.event.get():
+            if gme_event.type == pg.QUIT or self.keys[pg.K_ESCAPE]:
+                print('escape seq')
                 self.game_done = True
-            elif event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
-                self.player.check_click(event.pos)
-    def create_place_ship_grid(self):
+            elif gme_event.type == pg.MOUSEBUTTONDOWN and gme_event.button == 1:
+                self.player.check_click(gme_event.pos)
+
+    # def game_draw(self):
+
+
+
+    def create_place_ship_grid(self, area, surface):
         """
         This will creaet the grid from the previous phase with all the places ships
         """
-        print()
+        start = (area[0], area[1])
+        end = (area[2], area[3])
+        pg.draw.rect(surface, _SEA, (start, end), )
+        # pygame.draw.rect(_VARS['surf'], _BLACK, (start, end), 1)
+
+        for i in range(11):
+            # vert change x
+            pg.draw.line(surface,
+                         (255, 255, 255),
+                         (start[0] + (i * end[0] / 10), start[1]),
+                         (start[0] + (i * end[0] / 10), end[1] + start[1]),
+                         2)
+            # horizontal change y
+            pg.draw.line(surface,
+                         (255, 255, 255),
+                         (start[0], start[1] + (i * end[0] / 10)),
+                         (end[0] + start[0], start[1] + (i * end[0] / 10)),
+                         2)
+
+
     def game_render(self):
         """
         All drawing should be found here.
         This is the only place that pygame.display.update() should be found.
         """
         self.screen.fill(_GREY)
+        self.create_place_ship_grid(self.ship_grid_box, self.screen)
+        self.create_place_ship_grid(self.ship_hit_box, self.screen)
         self.player.display_mouse_position(self.screen)
         pg.display.update()
 
