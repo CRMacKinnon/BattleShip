@@ -14,7 +14,7 @@ from pygame.locals import K_q
 from scipy import spatial
 
 CAPTION = "Place Ships"
-SCREEN_SIZE = _WIDTH, _HEIGHT = 750, 750
+SCREEN_SIZE = _WIDTH, _HEIGHT = 750, 850
 _BLACK = (0, 0, 0)
 _GREY = (160, 160, 160)
 _WHITER = (225, 225, 225)
@@ -25,11 +25,11 @@ image_dir = os.path.dirname(sys.argv[0]) + '/images/'
 
 
 class Ships(object):
-    def __init__(self, name, image, start_pos, HP, size):
+    def __init__(self, name, image, start_pos, HP, size,scale):
         self.image_file = image
-        self.image = pg.transform.scale(pg.image.load(self.image_file), size).convert()
-        self.name = name
+        self.image = pg.transform.scale(pg.image.load(self.image_file), ((scale * size[0])-4,(scale *size[1] )-4)).convert()
         self.rectangle = self.image.get_rect()
+        self.name = name
         self.start = start_pos
         self.rectangle.centerx = start_pos[0]
         self.rectangle.top = start_pos[1]
@@ -69,13 +69,13 @@ class PlaceShips(object):
                                   image_dir + 'Carrier.png',
                                   (600, 60),
                                   5,
-                                  Ships._size_ship('CARRIER',self.grid_box ))
+                                 ( 50,250),1)
 
-        # self.battleship_ship = Ships('Battleship',
-        #                              image_dir + 'Battleship.png',
-        #                              (660, 180),
-        #                              4,
-        #                              Ships._size_ship('BATTLESHIP',self.grid_box ))
+        self.battleship_ship = Ships('Battleship',
+                                     image_dir + 'Battleship.png',
+                                     (660, 180),
+                                     4,
+                                     (50,200),1)
         #
         # self.cruiser_ship = Ships('Cruiser',
         #                           image_dir + 'cruiser.png',
@@ -404,25 +404,39 @@ class PlayGame(App):
         super().__init__()
         self.existing_fleet = fleet
 
-
         self.mouse = None
         self.game_done = False
-        self.ship_grid_box = (30, 30, _WIDTH / 3, _HEIGHT / 3)
+        self.ship_grid_box = (50, 400, 350, 350)
         self.ship_grid_dict= self.player.get_grid_positions(self.ship_grid_box)
 
-        self.ship_hit_box = (750-60 - _WIDTH / 2.5, 30, _WIDTH / 3, _HEIGHT / 3)
+        self.ship_hit_box = (50, 30, 350, 350)
         self.ship_hit_dict = self.player.get_grid_positions(self.ship_hit_box)
+        self.ratio = 0.95*(2*self.ship_grid_box[0] + self.ship_grid_box[2]) /  (2*self.player.grid_box[0] + self.player.grid_box[2])
 
-        self.image_ratio_x = (self.ship_grid_box[2]- self.ship_grid_box[0]) / \
-                             (self.player.grid_box[2]- self.player.grid_box[0])
+
+
+
+    def find_nearest_box(self, pos=()):
+    # TODO: add genraliseation for both grids
+        dictn = self.ship_grid_dict
+        if not pos:
+            pos = pg.mouse.get_pos()
+        dict_strcorrd = {coord_str: dictn[coord_str][4] for coord_str in dictn}
+        list_of_center = [dictn[coord_str][4] for coord_str in dictn]
+        tree = spatial.KDTree(list_of_center)
+        match = tree.query([(pos[0], pos[1])])
+        result = list(dict_strcorrd.keys())[
+            list(dict_strcorrd.values()).index(list_of_center[match[1][0]])]
+
+        return result
 
     def display_mouse_box(self, Coord, screen):
         mouse = pg.mouse.get_pos()
         font = pg.font.SysFont('arial', 15)
-        label1 = font.render(f'pos: {Coord} - {self.grid[Coord][:4]}', True, _BLACK)
+        label1 = font.render(f'pos: {Coord} - {self.ship_grid_dict[Coord][:4]}', True, _BLACK)
         rect = label1.get_rect()
-        if self.grid_box[0] < mouse[0] < (self.grid_box[2] + self.grid_box[0]) and self.grid_box[
-            1] < mouse[1] < (self.grid_box[3] + self.grid_box[1]):
+        if self.ship_grid_box[0] < mouse[0] < (self.ship_grid_box[2] + self.ship_grid_box[0]) and self.ship_grid_box[
+            1] < mouse[1] < (self.ship_grid_box[3] + self.ship_grid_box[1]):
             pg.draw.rect(screen, _GREY, [250, 0, rect[2] * 1, rect[3] * 1.3], )
             screen.blit(label1, (250, 0))
 
@@ -441,15 +455,18 @@ class PlayGame(App):
             elif gme_event.type == pg.MOUSEBUTTONDOWN and gme_event.button == 1:
                 self.player.check_click(gme_event.pos)
 
-    def place_existing_ships(self):
+    def place_existing_ships(self,rect):
         for ship_obj in self.existing_fleet:
-
             if ship_obj.ship_booleans['vertical']:
                 # upper most coord
+                # print(self.ship_grid_dict[ship_obj.position[0]][:4])
                 x,y,w,h = self.ship_grid_dict[ship_obj.position[0]][:4]
-                Center_x = x
-                ship_obj.rectangle.left = x
-                ship_obj.rectangle.top = y+h
+                xl, yl, wl, hl = self.ship_grid_dict[ship_obj.position[-1]][:4]
+                rect.centery = (y + yl+hl) / 2
+                rect.centerx = (x + x+w) / 2
+                return rect
+
+
 
     def grid_gen(self, area, surface):
         """
@@ -478,11 +495,11 @@ class PlayGame(App):
         self.grid_gen(self.ship_grid_box, self.screen)
         self.grid_gen(self.ship_hit_box, self.screen)
         for ship_obj in self.existing_fleet:
-            sizex, sizey = Ships._size_ship('CARRIER',self.player.grid_box)
-            surface.blit(pg.transform.scale(pg.image.load(ship_obj.image_file),
-                                            (sizex*(self.image_ratio_x),
-                                             sizey*(self.image_ratio_x)-4)).convert()
-                         ,ship_obj.rectangle)
+            image = pg.transform.scale(pg.image.load(ship_obj.image_file),
+                                            (50* self.ratio - 4, 250*self.ratio - 4)).convert()
+            rect = image.get_rect()
+            center = self.place_existing_ships(rect)
+            surface.blit(image, center)
 
     def game_render(self):
         """
@@ -490,10 +507,13 @@ class PlayGame(App):
         This is the only place that pygame.display.update() should be found.
         """
         self.screen.fill(_GREY)
-        self.place_existing_ships()
+        # self.place_existing_ships()
         self.game_draw(self.screen)
         self.player.display_mouse_position(self.screen)
+        # self.display_mouse_box(self.player.carrier_ship.position)
+        self.display_mouse_box(self.find_nearest_box(), self.screen)
         pg.display.update()
+
 
     def game_main_loop(self):
 
