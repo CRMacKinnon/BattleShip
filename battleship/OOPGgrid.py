@@ -353,7 +353,14 @@ class App():
         """
         self.mouse = pg.mouse.get_pos()
         for event in pg.event.get():
-            if event.type == pg.QUIT or self.keys[pg.K_ESCAPE]:
+            if event.type == pg.KEYDOWN:
+                print('keydown')
+                if event.key == pg.K_ESCAPE:
+                    print('keydownESC')
+                    self.done = True
+
+
+            if event.type == pg.QUIT:
                 self.done = True
             elif event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
                 self.player.check_click(event.pos)
@@ -389,14 +396,15 @@ class App():
         Like the event_loop, there should not be more than one game_loop.
         """
         while not self.done:
+            self.event_loop()
             if not self.boo:
-                self.event_loop()
                 self.player.update(self.screen_rect)
                 self.render()
                 self.clock.tick(self.fps)
-                self.done = self.player.check_all_place()
+                self.boo = self.player.check_all_place()
+                print(self.done)
 
-        PlayGame(self.player.fleet).game_main_loop()
+        # PlayGame(self.player.fleet).game_main_loop()
 
 
 class PlayGame(App):
