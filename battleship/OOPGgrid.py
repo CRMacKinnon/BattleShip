@@ -24,11 +24,10 @@ image_dir = os.path.dirname(sys.argv[0]) + '/images/'
 
 
 class Ships(object):
-    def __init__(self, name, image, start_pos, HP, size,scale):
-
+    def __init__(self, name, image, start_pos, HP, size, scale):
         self.image_file = image
         self.size = size
-        self.image = pg.transform.scale(pg.image.load(self.image_file), ((scale * size[0])-4,(scale *size[1] )-4))
+        self.image = pg.transform.scale(pg.image.load(self.image_file), ((scale * size[0]) - 4, (scale * size[1]) - 4))
         self.rectangle = self.image.get_rect()
         self.name = name
         self.start = start_pos
@@ -39,61 +38,45 @@ class Ships(object):
         self.ship_booleans = {
             'click_carrier': False,
             'vertical': True,
-            'On_Grid': False
-            'moveable':True
-            }
+            'On_Grid': False,
+            'moveable': True}
 
 
 class PlaceShips(object):
     """
     A class to represent our lovable red sqaure.
     """
+
     def __init__(self):
         """
         The argument pos corresponds to the center of our rectangle.
         """
         self.grid_box = (60, 60, _WIDTH / 2.5, _HEIGHT / 2.5)
         self.grid = self.get_grid_positions(self.grid_box)
-        self.ship_scale =self.grid['A1'][3] / 50
+        self.ship_scale = self.grid['A1'][3] / 50
         self.all_place = False
 
-        self.carrier_ship = Ships('Carrier',
-                                  image_dir + 'Carrier.png',
-                                  (800, 60),
-                                  5,
-                                 ( 50,250),self.ship_scale)
+        self.carrier_ship = Ships('Carrier', image_dir + 'Carrier.png', (800, 60), 5, (50, 250), self.ship_scale)
 
-        self.battleship_ship = Ships('Battleship',
-                                     image_dir + 'Battleship.png',
-                                     (860, 180),
-                                     4,
-                                     (50,200),self.ship_scale)
+        self.battleship_ship = Ships('Battleship', image_dir + 'Battleship.png', (860, 180), 4, (50, 200),
+                                     self.ship_scale)
 
-        self.cruiser_ship = Ships('Cruiser',
-                                  image_dir + 'cruiser.png',
-                                  (800, 330),
-                                  3, (50, 150), self.ship_scale)
+        self.cruiser_ship = Ships('Cruiser', image_dir + 'cruiser.png', (800, 330), 3, (50, 150), self.ship_scale)
 
-        self.submarine_ship = Ships('Submarine',
-                                    image_dir + 'Submarine.png',
-                                    (860, 400),
-                                    3,
-                                    ( 50,150),self.ship_scale)
+        self.submarine_ship = Ships('Submarine', image_dir + 'Submarine.png', (860, 400), 3, (50, 150), self.ship_scale)
 
-        self.destroyer_ship = Ships('Destroyer',
-                                    image_dir + 'destroyer.png',
-                                    (860, 60),
-                                    2, (50, 100), self.ship_scale)
+        self.destroyer_ship = Ships('Destroyer', image_dir + 'destroyer.png', (860, 60), 2, (50, 100), self.ship_scale)
 
         # self.fleet = [self.carrier_ship, self.battleship_ship, self.cruiser_ship,
         #               self.destroyer_ship, self.submarine_ship]
-        self.fleet = [self.carrier_ship,self.battleship_ship]
+        self.fleet = [self.carrier_ship, self.battleship_ship]
 
-    def check_all_place(self,phase):
+    def check_all_place(self, phase):
         for ship_obj in self.fleet:
             if not ship_obj.ship_booleans['On_Grid']:
                 return phase
-        return phase +1
+        return phase + 1
+
     def check_click(self, pos):
         """
         This function is called from the event loop to check if a click
@@ -109,7 +92,7 @@ class PlaceShips(object):
                 # be the most front object
                 self.fleet.append(self.fleet.pop(self.fleet.index(ship_obj)))
 
-    def find_nearest_box(self, pos=()):
+    def find_nearest_box(self, pos = ()):
         dictn = self.grid
         if not pos:
             pos = pg.mouse.get_pos()
@@ -117,8 +100,7 @@ class PlaceShips(object):
         list_of_center = [dictn[coord_str][4] for coord_str in dictn]
         tree = spatial.KDTree(list_of_center)
         match = tree.query([(pos[0], pos[1])])
-        result = list(dict_strcorrd.keys())[
-            list(dict_strcorrd.values()).index(list_of_center[match[1][0]])]
+        result = list(dict_strcorrd.keys())[list(dict_strcorrd.values()).index(list_of_center[match[1][0]])]
 
         return result
 
@@ -133,37 +115,33 @@ class PlaceShips(object):
                 ship_obj.rectangle.move_ip(pg.mouse.get_rel())
                 ship_obj.rectangle.clamp_ip(screen_rect)
 
-    def draw(self, surface):
+    def draw(self, surface,phase = 0):
         """
         Blit image and text to the target surface.
         """
 
         self.draw_grid(surface, self.grid_box)
-
         # f_button = self.button(surface, 'Play', (650, 650), 35)
         for ship_obj in self.fleet:
             surface.blit(ship_obj.image, ship_obj.rectangle)
+
+        if phase == 1:
+            self.draw_grid(surface, [self.grid_box[0]+ self.grid_box[2] + 100 ,self.grid_box[1],self.grid_box[2]])
 
     def draw_grid(self, surface, grid_main):
 
         start = (grid_main[0], grid_main[1])
         length = grid_main[2]
-        pg.draw.rect(surface, _SEA, (start, (length,length)) )
+        pg.draw.rect(surface, _SEA, (start, (length, length)))
         # pygame.draw.rect(_VARS['surf'], _BLACK, (start, end), 1)
 
         for i in range(11):
             # vert lines change x
-            pg.draw.line(surface,
-                         (255, 255, 255),
-                         (start[0] + (i * length / 10), start[1]),
-                         (start[0] + (i * length / 10), start[1] + length),
-                         2)
+            pg.draw.line(surface, (255, 255, 255), (start[0] + (i * length / 10), start[1]),
+                         (start[0] + (i * length / 10), start[1] + length), 2)
             # # horizontal lines  change y
-            pg.draw.line(surface,
-                         (255, 255, 255),
-                         (start[0], start[1] + (i * length / 10)),
-                         (length + start[0], start[1] + (i * length / 10)),
-                         2)
+            pg.draw.line(surface, (255, 255, 255), (start[0], start[1] + (i * length / 10)),
+                         (length + start[0], start[1] + (i * length / 10)), 2)
 
     def get_grid_positions(self, grid_main):
         grid = {f'{j}{i + 1}': '' for i in range(10) for j in list('ABCDEFGHIJ')}
@@ -171,17 +149,14 @@ class PlaceShips(object):
         start = (grid_main[0], grid_main[1])
         length = grid_main[2]
 
-        for row, LET in  enumerate(list('ABCDEFGHIJ')):
+        for row, LET in enumerate(list('ABCDEFGHIJ')):
             for col in range(10):
 
+                x = (2 * (start[0] + 5 + (col * length / 10)) + ((length / 10) - 8)) / 2
+                y = (2 * (start[1] + 5 + (row * length / 10)) + ((length / 10) - 8)) / 2
 
-                x = (2 * (start[0] + 5 + (col *length / 10)) + ((length / 10) - 8)) / 2
-                y = (2 * (start[1] + 5 + (row *length / 10)) + ((length / 10) - 8)) / 2
-
-                grid[f'{LET}{col+1}'] = [start[0] + 5 + (col* length/ 10),
-                                         start[1] + 5 + (row * length / 10),
-                                         (length / 10) - 5,
-                                         (length / 10) - 5, (x, y), False]
+                grid[f'{LET}{col + 1}'] = [start[0] + 5 + (col * length / 10), start[1] + 5 + (row * length / 10),
+                                           (length / 10) - 5, (length / 10) - 5, (x, y), False]
 
         return grid
 
@@ -192,11 +167,9 @@ class PlaceShips(object):
         if ship_obj.ship_booleans['vertical']:
             if ship_obj.ship_hp % 2 == 0:
                 if (ship_obj.rectangle.centery - self.grid[result][4][1]) <= 0:
-                    ship_obj.rectangle.centery = self.grid[result][4][1] - (
-                            self.grid[result][3] / 2) - 4
+                    ship_obj.rectangle.centery = self.grid[result][4][1] - (self.grid[result][3] / 2) - 4
                 else:
-                    ship_obj.rectangle.centery = self.grid[result][4][1] + (
-                            self.grid[result][3] / 2) + 4
+                    ship_obj.rectangle.centery = self.grid[result][4][1] + (self.grid[result][3] / 2) + 4
                 ship_obj.rectangle.centerx = self.grid[result][4][0]
 
             else:  # odd ship length and is vertical
@@ -213,11 +186,9 @@ class PlaceShips(object):
 
             if ship_obj.ship_hp % 2 == 0:
                 if (ship_obj.rectangle.centerx - self.grid[result][4][0]) <= 0:
-                    ship_obj.rectangle.centerx = self.grid[result][4][0] - (
-                            self.grid[result][2] / 2) - 4
+                    ship_obj.rectangle.centerx = self.grid[result][4][0] - (self.grid[result][2] / 2) - 4
                 else:
-                    ship_obj.rectangle.centerx = self.grid[result][4][0] + (
-                            self.grid[result][2] / 2) + 4
+                    ship_obj.rectangle.centerx = self.grid[result][4][0] + (self.grid[result][2] / 2) + 4
                 ship_obj.rectangle.centery = self.grid[result][4][1]
 
             else:  # odd ship length and is vertical
@@ -296,7 +267,8 @@ class PlaceShips(object):
         label1 = font.render(f'pos: {Coord} - {self.grid[Coord][:4]}', True, _BLACK)
         rect = label1.get_rect()
 
-        if self.grid_box[0] < mouse[0] < (length + self.grid_box[0]) and self.grid_box[1] < mouse[1] < (length + self.grid_box[1]):
+        if self.grid_box[0] < mouse[0] < (length + self.grid_box[0]) and self.grid_box[1] < mouse[1] < (
+                length + self.grid_box[1]):
             pg.draw.rect(screen, _GREY, [250, 0, rect[2] * 1, rect[3] * 1.3], )
             screen.blit(label1, (250, 0))
 
@@ -343,7 +315,6 @@ class App():
         self.player = PlaceShips()
         self.phase = 0
 
-
     def event_loop(self):
         """
         This is the event loop for the whole program.
@@ -352,29 +323,23 @@ class App():
         """
         self.mouse = pg.mouse.get_pos()
         for event in pg.event.get():
-            if event.type == pg.KEYDOWN:
-                print('keydown')
-                if event.key == pg.K_ESCAPE:
-                    print('keydownESC')
-                    self.done = True
-
-
-            if event.type == pg.QUIT:
+            if event.type == pg.QUIT or self.keys[pg.K_ESCAPE]:
                 self.done = True
-            elif event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
-                self.player.check_click(event.pos)
+            if self.phase == 0:
+                if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
+                    self.player.check_click(event.pos)
 
-            elif event.type == pg.MOUSEBUTTONUP and event.button == 1:
-                for ship in self.player.fleet:
-                    if ship.ship_booleans['click_carrier']:
-                        ship.ship_booleans['click_carrier'] = False
-                        self.player.ship_snap_to_box(ship)
-            elif event.type == pg.KEYDOWN:
-                self.keys = pg.key.get_pressed()
-                for ship_obj in self.player.fleet:
-                    if event.key == pg.K_r and ship_obj.ship_booleans['click_carrier'] is True:
-                        self.player.rotate_ship(ship_obj, self.screen)
-                        break
+                elif event.type == pg.MOUSEBUTTONUP and event.button == 1:
+                    for ship in self.player.fleet:
+                        if ship.ship_booleans['click_carrier']:
+                            ship.ship_booleans['click_carrier'] = False
+                            self.player.ship_snap_to_box(ship)
+                elif event.type == pg.KEYDOWN:
+                    self.keys = pg.key.get_pressed()
+                    for ship_obj in self.player.fleet:
+                        if event.key == pg.K_r and ship_obj.ship_booleans['click_carrier'] is True:
+                            self.player.rotate_ship(ship_obj, self.screen)
+                            break
 
     def render(self):
         """
@@ -383,7 +348,7 @@ class App():
         """
         self.screen.fill(_GREY)
         self.player.display_mouse_position(self.screen)
-        self.player.draw(self.screen)
+        self.player.draw(self.screen,self.phase)
         self.player.display_mouse_box(self.player.find_nearest_box(), self.screen)
         self.player.display_ship_placement(self.screen, self.player.fleet)
 
@@ -397,22 +362,15 @@ class App():
         while not self.done:
             self.event_loop()
             if self.phase == 0:
-                print(self.phase )
                 self.player.update(self.screen_rect)
                 self.render()
                 self.clock.tick(self.fps)
                 self.phase = self.player.check_all_place(self.phase)
+
             elif self.phase == 1:
-                print(self.phase)
                 self.player.update(self.screen_rect)
                 self.render()
                 self.clock.tick(self.fps)
-                # self.phase = self.player.check_all_place(self.phase)
-
-
-
-
-
 
 
 if __name__ == "__main__":
